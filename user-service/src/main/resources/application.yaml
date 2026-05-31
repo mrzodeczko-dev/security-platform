@@ -46,5 +46,8 @@ password:
   encoder:
     type: argon2
 
+mfa:
+  issuer: ${MFA_ISSUER}
+
 internal:
   secret: ${INTERNAL_SECRET}
