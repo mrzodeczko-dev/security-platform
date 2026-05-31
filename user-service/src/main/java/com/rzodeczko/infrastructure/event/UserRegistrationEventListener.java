@@ -18,7 +18,18 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.security.SecureRandom;
 
+// Listener reagujący na UserRegisteredEvent — generuje kod i wysyła email aktywacyjny.
 
+// @Async — wykonuje się w osobnym wirtualnym wątku.
+// HTTP response wraca do klienta NATYCHMIAST po commicie rejestracji.
+
+// @TransactionalEventListener(AFTER_COMMIT) — wywołany DOPIERO po commicie
+// transakcji rejestracji. Jeśli transakcja rollback → listener nie wykona się.
+
+// @Transactional(REQUIRES_NEW) — listener otwiera WŁASNĄ nową transakcję.
+// Potrzebne bo AFTER_COMMIT jest wywoływany gdy oryginalna transakcja jest zamknięta.
+// Bez REQUIRES_NEW: save() kodu → "no transaction active" → TransactionRequiredException.
+// Jeśli SMTP rzuci wyjątek → nowa transakcja rollback, ale rejestracja już scommitowana.
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -29,7 +40,6 @@ public class UserRegistrationEventListener {
     private final EmailPort emailPort;
     private final UserActivationProperties properties;
 
-
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Async
@@ -37,8 +47,6 @@ public class UserRegistrationEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onUserRegistered(UserRegisteredEvent event) {
         log.debug("Processing UserRegisteredEvent for userId={}", event.userId());
-
-
         var user = userRepository
                 .findById(event.userId())
                 .orElseThrow(() -> new UserNotFoundException(event.userId()));

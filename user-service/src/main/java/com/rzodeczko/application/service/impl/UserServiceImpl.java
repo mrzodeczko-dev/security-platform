@@ -52,12 +52,10 @@ public class UserServiceImpl implements UserService {
 
         var savedUser = userRepository.save(user);
 
-
         eventPublisher.publishUserRegistered(new UserRegisteredEvent(savedUser.getId()));
 
         return savedUser.getUsername();
     }
-
 
     @Override
     public String activate(String code) {
@@ -85,7 +83,6 @@ public class UserServiceImpl implements UserService {
         return user.getUsername();
     }
 
-
     @Override
     public String resendActivationCode(String email) {
         var user = userRepository
@@ -99,7 +96,6 @@ public class UserServiceImpl implements UserService {
         eventPublisher.publishUserRegistered(new UserRegisteredEvent(user.getId()));
         return user.getUsername();
     }
-
 
     @Override
     public String getPasswordResetPermission(String code) {
@@ -126,7 +122,6 @@ public class UserServiceImpl implements UserService {
         return user.getEmail();
     }
 
-
     @Override
     public String resetPassword(ResetPasswordCommand command) {
         if (!command.password().equals(command.passwordConfirmation())) {
@@ -147,7 +142,6 @@ public class UserServiceImpl implements UserService {
                 .getUsername();
     }
 
-
     @Override
     public String setupMfa(String username) {
         var user = userRepository
@@ -164,7 +158,6 @@ public class UserServiceImpl implements UserService {
 
         return user.getMfaQrUrl();
     }
-
 
     @Override
     public String changeUserRole(ChangeUserRoleCommand command) {
