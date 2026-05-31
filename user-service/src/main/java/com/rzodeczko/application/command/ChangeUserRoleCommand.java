@@ -4,6 +4,7 @@ import com.rzodeczko.domain.model.Role;
 
 import java.util.UUID;
 
+
 public record ChangeUserRoleCommand(
         UUID targetUserId,
         Role newRole,

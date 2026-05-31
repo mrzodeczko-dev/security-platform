@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.3</version>
+        <version>4.0.6</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.app</groupId>
@@ -69,17 +69,32 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+        <!--
+            spring-security-crypto zamiast pełnego spring-boot-starter-security.
+            user-service NIE potrzebuje Spring Security filter chain.
+            Korzystamy tylko z PasswordEncoder (Argon2 przez BouncyCastle).
+        -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
-
+        <!--
+            BouncyCastle — dostawca kryptograficzny wymagany przez Argon2PasswordEncoder.
+            Argon2 to state-of-the-art algorytm hashowania haseł (winner Password Hashing
+            Competition 2015). Przewyższa BCrypt pod względem odporności na ataki GPU/ASIC
+            dzięki parametryzacji zużycia pamięci RAM.
+        -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk18on</artifactId>
             <version>${bcpkix.version}</version>
         </dependency>
-
+        <!--
+            Google Authenticator — używana WYŁĄCZNIE do setupMfa():
+            - createCredentials() → generuje losowy Base32 secret TOTP
+            - getOtpAuthURL()     → buduje URL otpauth://totp/... dla QR kodu
+            Weryfikacja kodów TOTP podczas logowania należy do auth-service.
+        -->
         <dependency>
             <groupId>com.warrenstrange</groupId>
             <artifactId>googleauth</artifactId>

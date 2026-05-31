@@ -6,7 +6,9 @@ import com.rzodeczko.application.dto.UserCredentialsResultDto;
 
 public interface UserService {
 
-    //  api-gateway
+    // ----------------------------------------------------------------------------------------------------
+    // Metody publiczne (dostepne przez api-gateway)
+    // ----------------------------------------------------------------------------------------------------
 
     String register(RegisterUserCommand command);
 
@@ -22,7 +24,9 @@ public interface UserService {
 
     String changeUserRole(ChangeUserRoleCommand command);
 
-    // auth-service
+    // ----------------------------------------------------------------------------------------------------
+    // Metody prywatne (wylacznie przez auth-service)
+    // ----------------------------------------------------------------------------------------------------
 
     UserCredentialsResultDto verifyCredentials(VerifyCredentialsCommand command);
 

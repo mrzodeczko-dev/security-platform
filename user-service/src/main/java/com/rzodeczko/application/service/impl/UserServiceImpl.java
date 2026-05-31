@@ -85,21 +85,21 @@ public class UserServiceImpl implements UserService {
         return user.getUsername();
     }
 
+
     @Override
     public String resendActivationCode(String email) {
         var user = userRepository
                 .findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException(email));
 
-        // Usun stary kod jesli istnieje - jeden aktywny kod na user naraz
         verificationCodeRepository
                 .findByUserId(user.getId())
                 .ifPresent(verificationCodeRepository::delete);
 
-        // Ponownie uzywamy ten sam event co wczesniej
         eventPublisher.publishUserRegistered(new UserRegisteredEvent(user.getId()));
         return user.getUsername();
     }
+
 
     @Override
     public String getPasswordResetPermission(String code) {
@@ -147,6 +147,7 @@ public class UserServiceImpl implements UserService {
                 .getUsername();
     }
 
+
     @Override
     public String setupMfa(String username) {
         var user = userRepository
@@ -163,6 +164,7 @@ public class UserServiceImpl implements UserService {
 
         return user.getMfaQrUrl();
     }
+
 
     @Override
     public String changeUserRole(ChangeUserRoleCommand command) {

@@ -4,27 +4,33 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f972d051-9a8f-4956-b674-e60030c0d7a2" name="Changes" comment="domain">
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/ChangeUserRoleCommand.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/GetMfaDataCommand.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/RegisterUserCommand.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/ResetPasswordCommand.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/VerifyCredentialsCommand.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/MfaDataResultDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/MfaSetupResultDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/UserCredentialsResultDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/event/UserRegisteredEvent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/port/EmailPort.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/port/EventPublisherPort.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/port/MfaSetupPort.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/port/PasswordEncoderPort.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/service/UserService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/service/impl/UserServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/InsufficientRoleException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/test/java/com/rzodeczko/UserServiceApplicationTests.java" afterDir="false" />
+    <list default="true" id="f972d051-9a8f-4956-b674-e60030c0d7a2" name="Changes" comment="application layer">
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/email/JavaEmailAdapter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/event/SpringEventPublisherAdapter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/event/UserRegistrationEventListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/mfa/GoogleAuthMfaSetupAdapter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/persistence/adapter/UserRepositoryAdapter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/persistence/adapter/VerificationCodeRepositoryAdapter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/persistence/entity/UserEntity.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/persistence/entity/VerificationCodeEntity.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/persistence/mapper/UserMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/persistence/mapper/VerificationCodeMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/persistence/repository/JpaUserRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/persistence/repository/JpaVerificationCodeRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/security/InternalRequestFilter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/security/PasswordEncoderAdapter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/service/tx/TransactionalUserService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/user-service/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/ChangeUserRoleCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/ChangeUserRoleCommand.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/MfaDataResultDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/MfaDataResultDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/MfaSetupResultDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/MfaSetupResultDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/UserCredentialsResultDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/UserCredentialsResultDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/port/PasswordEncoderPort.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/port/PasswordEncoderPort.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/service/UserService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/service/impl/UserServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/User.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/VerificationCode.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/VerificationCode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/configuration/BeanConfiguration.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/configuration/BeanConfiguration.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/user-service/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/resources/application.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -144,7 +150,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1780214440167</updated>
-      <workItem from="1780214441189" duration="3430000" />
+      <workItem from="1780214441189" duration="4658000" />
     </task>
     <task id="LOCAL-00001" summary="configuration">
       <option name="closed" value="true" />
@@ -162,7 +168,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780220346081</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="application layer">
+      <option name="closed" value="true" />
+      <created>1780222471474</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1780222471474</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -171,6 +185,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="configuration" />
     <MESSAGE value="domain" />
-    <option name="LAST_COMMIT_MESSAGE" value="domain" />
+    <MESSAGE value="application layer" />
+    <option name="LAST_COMMIT_MESSAGE" value="application layer" />
   </component>
 </project>
