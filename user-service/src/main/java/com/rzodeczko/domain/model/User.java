@@ -10,12 +10,14 @@ public class User {
 
     private String password;
 
-    private final Role role;
+    private Role role;
 
     private boolean enabled;
 
+
     private String mfaSecret;
     private String mfaQrUrl;
+
 
     public User(String username, String email, String encodedPassword, Role role) {
         this.username = username;
@@ -45,17 +47,16 @@ public class User {
         this.mfaQrUrl = mfaQrUrl;
     }
 
-    // -----------------------------------------------------------------------------------------------------------------
-    // Domain methods
-    // -----------------------------------------------------------------------------------------------------------------
 
     public void activate() {
         this.enabled = true;
     }
 
+
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
+
 
     public void enableMfa(String secret, String qrUrl) {
         this.mfaSecret = secret;
@@ -64,6 +65,10 @@ public class User {
 
     public boolean hasMfaActive() {
         return this.mfaQrUrl != null;
+    }
+
+    public void changeRole(Role newRole) {
+        this.role = newRole;
     }
 
     public UUID getId() {

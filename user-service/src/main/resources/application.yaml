@@ -27,7 +27,6 @@ spring:
 #    init:
 #      mode: always
 
-
   mail:
     host: ${MAIL_HOST}
     username: ${MAIL_USERNAME}

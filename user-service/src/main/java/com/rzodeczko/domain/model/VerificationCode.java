@@ -6,7 +6,6 @@ import java.util.UUID;
 public class VerificationCode {
     private UUID id;
     private final String code;
-
     private final long expiresAt;
     private final UUID userId;
 

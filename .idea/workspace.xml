@@ -4,29 +4,27 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f972d051-9a8f-4956-b674-e60030c0d7a2" name="Changes" comment="configuration">
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/EmailAlreadyExistsException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/InvalidCredentialsException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/MfaAlreadyActivatedException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/PasswordMismatchException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/UserAlreadyActivatedException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/UserNotActivatedException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/UserNotFoundException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/UsernameAlreadyExistsException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/VerificationCodeExpiredException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/VerificationCodeNotFoundException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/Role.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/User.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/VerificationCode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/repository/UserRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/repository/VerificationCodeRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/configuration/properties/MfaProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/user-service/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/user-service/mvnw" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/user-service/mvnw.cmd" beforeDir="false" />
+    <list default="true" id="f972d051-9a8f-4956-b674-e60030c0d7a2" name="Changes" comment="domain">
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/ChangeUserRoleCommand.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/GetMfaDataCommand.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/RegisterUserCommand.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/ResetPasswordCommand.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/command/VerifyCredentialsCommand.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/MfaDataResultDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/MfaSetupResultDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/dto/UserCredentialsResultDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/event/UserRegisteredEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/port/EmailPort.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/port/EventPublisherPort.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/port/MfaSetupPort.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/port/PasswordEncoderPort.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/service/UserService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/application/service/impl/UserServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/exception/InsufficientRoleException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/user-service/src/test/java/com/rzodeczko/UserServiceApplicationTests.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/user-service/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/configuration/BeanConfiguration.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/infrastructure/configuration/BeanConfiguration.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/presentation/controller/HealthCheckController.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/presentation/controller/HealthCheckController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/VerificationCode.java" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/java/com/rzodeczko/domain/model/VerificationCode.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/user-service/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/user-service/src/main/resources/application.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -146,7 +144,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1780214440167</updated>
-      <workItem from="1780214441189" duration="1893000" />
+      <workItem from="1780214441189" duration="3430000" />
     </task>
     <task id="LOCAL-00001" summary="configuration">
       <option name="closed" value="true" />
@@ -156,7 +154,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780215129898</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="domain">
+      <option name="closed" value="true" />
+      <created>1780220346081</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1780220346081</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -164,6 +170,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="configuration" />
-    <option name="LAST_COMMIT_MESSAGE" value="configuration" />
+    <MESSAGE value="domain" />
+    <option name="LAST_COMMIT_MESSAGE" value="domain" />
   </component>
 </project>
