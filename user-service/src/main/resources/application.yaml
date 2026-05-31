@@ -1,0 +1,50 @@
+server:
+  port: ${SERVER_PORT}
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME}
+  threads:
+    virtual:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      connection-timeout: 2000
+      keepalive-time: 30000
+      max-lifetime: 1800000
+#  sql:
+#    init:
+#      mode: always
+
+
+  mail:
+    host: ${MAIL_HOST}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    port: ${MAIL_PORT}
+    protocol: smtp
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+user-activation:
+  expiration-ms: 300000
+  code-digits: 6
+
+password:
+  encoder:
+    type: argon2
+
+internal:
+  secret: ${INTERNAL_SECRET}
