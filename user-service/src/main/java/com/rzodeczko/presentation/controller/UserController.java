@@ -77,6 +77,11 @@ public class UserController {
                 .body(ApiResponseDto.data(username));
     }
 
+    @PostMapping("{userId}/mfa")
+    public ResponseEntity<ApiResponseDto<String>> setupMfa(@PathVariable UUID userId) {
+        return ResponseEntity.ok(ApiResponseDto.data(userService.setupMfa(userId)));
+    }
+
     @PutMapping("/{userId}/role")
     public ResponseEntity<ApiResponseDto<String>> changeUserRole(
             @PathVariable UUID userId,
