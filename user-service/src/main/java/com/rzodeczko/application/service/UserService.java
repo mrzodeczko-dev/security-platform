@@ -4,6 +4,8 @@ import com.rzodeczko.application.command.*;
 import com.rzodeczko.application.dto.MfaDataResultDto;
 import com.rzodeczko.application.dto.UserCredentialsResultDto;
 
+import java.util.UUID;
+
 public interface UserService {
 
     // ----------------------------------------------------------------------------------------------------
@@ -26,7 +28,7 @@ public interface UserService {
     String resetPassword(ResetPasswordCommand command);
 
     // MFA Setup: generate TOTP secret → save → return QR URL
-    String setupMfa(String username);
+    String setupMfa(UUID userId);
 
     // changeUserRole — role change by administrator.
     // Requires ROLE_ADMIN in X-User-Role header (verification in service layer).

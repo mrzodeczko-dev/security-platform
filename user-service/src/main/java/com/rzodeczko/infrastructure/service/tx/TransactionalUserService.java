@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service("transactionalUserService")
 @Slf4j
 public class TransactionalUserService implements UserService {
@@ -52,8 +54,8 @@ public class TransactionalUserService implements UserService {
 
     @Override
     @Transactional
-    public String setupMfa(String username) {
-        return delegate.setupMfa(username);
+    public String setupMfa(UUID userId) {
+        return delegate.setupMfa(userId);
     }
 
     @Override

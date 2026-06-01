@@ -13,6 +13,8 @@ import com.rzodeczko.domain.model.User;
 import com.rzodeczko.domain.repository.UserRepository;
 import com.rzodeczko.domain.repository.VerificationCodeRepository;
 
+import java.util.UUID;
+
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
@@ -143,16 +145,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public String setupMfa(String username) {
+    public String setupMfa(UUID userId) {
         var user = userRepository
-                .findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(username));
+                .findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
 
         if (user.hasMfaActive()) {
             throw new MfaAlreadyActivatedException();
         }
 
-        var mfaResult = mfaSetup.generateCredentials(username);
+        var mfaResult = mfaSetup.generateCredentials(user.getUsername());
         user.enableMfa(mfaResult.secret(), mfaResult.qrUrl());
         userRepository.save(user);
 
