@@ -69,6 +69,10 @@ public class User {
         this.role = newRole;
     }
 
+    public boolean isAdmin() {
+        return this.role == Role.ADMIN;
+    }
+
     public UUID getId() {
         return id;
     }
