@@ -276,8 +276,8 @@ graph LR
     end
 
     subgraph DOMAIN["🏛️ Domain"]
-        UM[User · VerificationCode\nRole]
-        UR[UserRepository\nVerificationCodeRepository]
+        UM["User · VerificationCode<br/>Role"]
+        UR["UserRepository<br/>VerificationCodeRepository"]
     end
 
     subgraph INFRASTRUCTURE["🔧 Infrastructure"]
@@ -288,13 +288,13 @@ graph LR
             PEA[PasswordEncoderAdapter]
         end
         subgraph PERSISTENCE["Persistence"]
-            JPA[JPA Adapters\nUserRepositoryAdapter\nVerificationCodeRepositoryAdapter]
+            JPA["JPA Adapters<br/>UserRepositoryAdapter<br/>VerificationCodeRepositoryAdapter"]
         end
         subgraph EVENTS["Event Handling"]
-            UREL[UserRegistrationEventListener\n@Async · AFTER_COMMIT\nREQUIRES_NEW tx]
+            UREL["UserRegistrationEventListener<br/>@Async · AFTER_COMMIT<br/>REQUIRES_NEW tx"]
         end
         subgraph SECURITY["Security"]
-            IRF[InternalRequestFilter\nX-Internal-Secret]
+            IRF["InternalRequestFilter<br/>X-Internal-Secret"]
         end
     end
 
