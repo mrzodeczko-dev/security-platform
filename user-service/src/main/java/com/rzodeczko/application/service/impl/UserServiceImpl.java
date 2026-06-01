@@ -166,6 +166,18 @@ public class UserServiceImpl implements UserService {
             throw new InsufficientRoleException("ROLE_ADMIN");
         }
 
+        if (command.requestingUserId() == null) {
+            throw new InsufficientRoleException("ROLE_ADMIN");
+        }
+
+        var requestingUser = userRepository
+                .findById(command.requestingUserId())
+                .orElseThrow(() -> new InsufficientRoleException("ROLE_ADMIN"));
+
+        if (!requestingUser.isAdmin()) {
+            throw new InsufficientRoleException("ROLE_ADMIN");
+        }
+
         var user = userRepository
                 .findById(command.targetUserId())
                 .orElseThrow(() -> new UserNotFoundException(command.targetUserId()));
