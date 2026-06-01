@@ -7,22 +7,22 @@ public class VerificationCode {
     private UUID id;
     private final String code;
 
-    // Unix timestamp w ms — kiedy kod traci ważność.
-    // long (primitive) zamiast Long (wrapper) — brak NPE risk.
+    // Unix timestamp in ms — when code expires.
+    // long (primitive) instead of Long (wrapper) — no NPE risk.
     private final long expiresAt;
 
-    // Referencja do User przez UUID — nie przez obiekt.
-    // Eliminuje coupling między VerificationCode a User w warstwie domeny.
+    // Reference to User via UUID — not via object.
+    // Eliminates coupling between VerificationCode and User in domain layer.
     private final UUID userId;
 
-    // Konstruktor dla nowych kodow - id null (przed insert do bazy danych)
+    // Constructor for new codes - id null (before insert to database)
     public VerificationCode(String code, long expiresAt, UUID userId) {
         this.code = code;
         this.expiresAt = expiresAt;
         this.userId = userId;
     }
 
-    // Konstruktor rekonstrukcji z bazy
+    // Reconstruction constructor from database
     public VerificationCode(UUID id, String code, long expiresAt, UUID userId) {
         this.id = id;
         this.code = code;
@@ -30,9 +30,9 @@ public class VerificationCode {
         this.userId = userId;
     }
 
-    // isExpired() — logika biznesowa "kod wygasł" należy do domeny.
-    // NIE do kontrolera, NIE do serwisu infrastrukturalnego.
-    // Instant.now().toEpochMilli() — milisekundowa precyzja, UTC.
+    // isExpired() — business logic "code expired" belongs to domain.
+    // NOT to controller, NOT to infrastructure service.
+    // Instant.now().toEpochMilli() — millisecond precision, UTC.
     public boolean isExpired() {
         return Instant.now().toEpochMilli() >= this.expiresAt;
     }

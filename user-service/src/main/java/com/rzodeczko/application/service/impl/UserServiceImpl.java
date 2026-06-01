@@ -161,7 +161,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String changeUserRole(ChangeUserRoleCommand command) {
-        // Weryfikacja uprawnien requestujacego
+        // Permission verification of requesting user
         if (!"ROLE_ADMIN".equals(command.requestingUserRole())) {
             throw new InsufficientRoleException("ROLE_ADMIN");
         }

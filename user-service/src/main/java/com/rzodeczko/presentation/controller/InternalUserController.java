@@ -30,7 +30,7 @@ public class InternalUserController {
     public ResponseEntity<UserCredentialsResponseDto> verifyCredentials(
             @Valid @RequestBody VerifyCredentialsRequestDto req
     ) {
-        log.debug("Inernal: verifyCredentials for username={}", req.username());
+        log.debug("Internal: verifyCredentials for username={}", req.username());
         var result = userService.verifyCredentials(
                 new VerifyCredentialsCommand(req.username(), req.password())
         );
