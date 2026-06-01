@@ -7,39 +7,36 @@ import com.rzodeczko.application.dto.UserCredentialsResultDto;
 public interface UserService {
 
     // ----------------------------------------------------------------------------------------------------
-    // Metody publiczne (dostepne przez api-gateway)
+    // Public methods (available via api-gateway)
     // ----------------------------------------------------------------------------------------------------
 
-    // Rejestracja: walidacja → hash hasła → INSERT → email z kodem aktywacyjnym
+    // Registration: validation → hash password → INSERT → email with activation code
     String register(RegisterUserCommand command);
 
-    // Aktywacja: weryfikacja kodu → UPDATE enabled=true → DELETE kod
+    // Activation: code verification → UPDATE enabled=true → DELETE code
     String activate(String code);
 
-    // Ponowne wysłanie kodu: DELETE stary kod → INSERT nowy → email
+    // Resend code: DELETE old code → INSERT new → email
     String resendActivationCode(String email);
 
-    // Krok 2/3 resetu hasła: weryfikacja kodu → zwraca email (do użycia w kroku 3)
+    // Step 2/3 password reset: code verification → returns email (for use in step 3)
     String getPasswordResetPermission(String code);
 
-    // Krok 3/3 resetu hasła: weryfikacja haseł → UPDATE hasło
+    // Step 3/3 password reset: password verification → UPDATE password
     String resetPassword(ResetPasswordCommand command);
 
-    // Setup MFA: generowanie secret TOTP → zapisanie → zwraca QR URL
+    // MFA Setup: generate TOTP secret → save → return QR URL
     String setupMfa(String username);
 
-    // changeUserRole — zmiana roli przez administratora.
-    // Wymaga ROLE_ADMIN w nagłówku X-User-Role (weryfikacja w service layer).
-    // Zwraca username zmienionego usera jako potwierdzenie operacji.
+    // changeUserRole — role change by administrator.
+    // Requires ROLE_ADMIN in X-User-Role header (verification in service layer).
+    // Returns username of changed user as operation confirmation.
     String changeUserRole(ChangeUserRoleCommand command);
 
     // ----------------------------------------------------------------------------------------------------
-    // Metody prywatne (wylacznie przez auth-service)
+    // Private methods (only via auth-service)
     // ----------------------------------------------------------------------------------------------------
-
-    // Weryfikacja hasła podczas logowania — zwraca dane do generowania JWT lub MFA flag
     UserCredentialsResultDto verifyCredentials(VerifyCredentialsCommand command);
 
-    // Pobranie mfaSecret + danych usera — auth-service weryfikuje TOTP lokalnie
     MfaDataResultDto getMfaData(GetMfaDataCommand command);
 }

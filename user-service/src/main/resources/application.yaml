@@ -25,9 +25,9 @@ spring:
       connection-timeout: 2000
       keepalive-time: 30000
       max-lifetime: 1800000
-#  sql:
-#    init:
-#      mode: always
+  #  sql:
+  #    init:
+  #      mode: always
 
 
   mail:
@@ -53,3 +53,8 @@ mfa:
 
 internal:
   secret: ${INTERNAL_SECRET}
+
+
+springdoc:
+  swagger-ui:
+    enabled: ${SPRINGDOC_API_DOCS_SWAGGER_ENABLED:false}
