@@ -1,5 +1,12 @@
 package com.rzodeczko.infrastructure.configuration;
 
+
+import com.rzodeczko.application.port.MfaCachePort;
+import com.rzodeczko.application.port.MfaVerificationPort;
+import com.rzodeczko.application.port.TokenPort;
+import com.rzodeczko.application.port.UserVerificationPort;
+import com.rzodeczko.application.service.AuthService;
+import com.rzodeczko.application.service.impl.AuthServiceImpl;
 import com.rzodeczko.infrastructure.configuration.properties.JwtProperties;
 import com.rzodeczko.infrastructure.configuration.properties.MfaCacheProperties;
 import com.rzodeczko.infrastructure.configuration.properties.UserServiceProperties;
@@ -50,5 +57,20 @@ public class BeanConfiguration {
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
         factory.setReadTimeout(Duration.ofMillis(userServiceProperties.readTimeoutMs()));
         return builder -> builder.requestFactory(factory);
+    }
+
+    @Bean("authServiceImpl")
+    public AuthService authServiceImpl(
+            UserVerificationPort userVerificationPort,
+            TokenPort tokenPort,
+            MfaCachePort mfaCachePort,
+            MfaVerificationPort mfaVerificationPort
+    ) {
+        return new AuthServiceImpl(
+                userVerificationPort,
+                tokenPort,
+                mfaCachePort,
+                mfaVerificationPort
+        );
     }
 }
