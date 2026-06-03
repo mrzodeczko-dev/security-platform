@@ -4,6 +4,7 @@ import com.app.infrastructure.configuration.properties.JwtProperties;
 import com.app.infrastructure.configuration.properties.MfaCacheProperties;
 import com.app.infrastructure.configuration.properties.UserServiceProperties;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
+import io.jsonwebtoken.Jwts;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
