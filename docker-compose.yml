@@ -1,0 +1,85 @@
+services:
+
+  # --------------------------------------------------------------------------------------------------------------------
+  # AUTH REDIS
+  # --------------------------------------------------------------------------------------------------------------------
+  auth-redis:
+    image: redis:8.2-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --bind 0.0.0.0
+      --protected-mode yes
+      --requirepass ${AUTH_REDIS_PASSWORD}
+      --appendonly yes
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - auth-redis-data:/data
+
+    expose:
+      - "6379"
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+          cpus: "0.5"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${AUTH_REDIS_PASSWORD}", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mr-network
+
+  # --------------------------------------------------------------------------------------------------------------------
+  # AUTH SERVICE
+  # --------------------------------------------------------------------------------------------------------------------
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    restart: on-failure:5
+    ports:
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+    depends_on:
+      user-service:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: ${AUTH_SERVICE_APPLICATION_NAME}
+      SERVER_PORT: ${AUTH_SERVICE_PORT}
+      JWT_SECRET: ${AUTH_JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION_MS: ${AUTH_JWT_ACCESS_TOKEN_EXPIRATION_MS}
+      JWT_REFRESH_TOKEN_EXPIRATION_MS: ${AUTH_JWT_REFRESH_TOKEN_EXPIRATION_MS}
+      USER_SERVICE_URL: ${AUTH_USER_SERVICE_URL}
+      INTERNAL_SECRET: ${AUTH_SERVICE_INTERNAL_SECRET}
+      REDIS_HOST: ${AUTH_REDIS_HOST}
+      REDIS_PORT: ${AUTH_REDIS_PORT}
+      REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - mr-network
+
+
+volumes:
+  auth-redis-data:
+
+networks:
+  mr-network:
