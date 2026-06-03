@@ -1,0 +1,94 @@
+# SPRING BOOT - SECURITY - USER SERVICE
+
+###
+# @name 01 - HEALTH CHECK
+GET http://localhost:8083
+
+###
+# @name 02 - REGISTRATION
+POST http://localhost:8083/users
+Content-Type: application/json
+
+{
+  "username": "a",
+  "email": "michal.r@gmail.com",
+  "password": "password123",
+  "passwordConfirmation": "password123",
+  "role": "ADMIN"
+}
+
+###
+# @name 03 - ACTIVATION
+POST http://localhost:8083/users/activation
+Content-Type: application/json
+
+{
+  "code": "785707"
+}
+
+###
+# @name 04 - INTERNAL - VERIFY CREDENTIALS
+POST http://localhost:8083/internal/users/credentials
+X-Internal-Secret: 8/519tssNgJsQD6QxP+fCQjhqRrva7chybpCYvRUQGY=
+Content-Type: application/json
+
+{
+  "username": "u",
+  "password": "password123"
+}
+
+###
+# @name 05 - CODE
+POST http://localhost:8083/users/code
+Content-Type: application/json
+
+{
+  "email": "michal.r@gmail.com"
+}
+
+###
+# @name 06 - RESET PASSWORD - PERMISSION
+POST http://localhost:8083/users/password/permission
+Content-Type: application/json
+
+{
+  "code": "174314"
+}
+
+###
+# @name 07 - RESET PASSWORD - NEW PASSWORD
+POST http://localhost:8083/users/password/reset
+Content-Type: application/json
+
+{
+  "email": "michal.r@gmail.com",
+  "password": "password123",
+  "passwordConfirmation": "password123"
+}
+
+###
+# @name 08 - CHANGE ROLE
+PUT http://localhost:8083/users/75da1680-0aae-4648-b561-330d17f00fcd/role
+X-User-Id: 37dfa0e8-be26-4105-8d1b-f79c585483d9
+X-User-Role: ROLE_ADMIN
+Content-Type: application/json
+
+{
+  "newRole": "USER"
+}
+
+###
+# @name 09 - ENABLE MFA
+POST http://localhost:8083/users/75da1680-0aae-4648-b561-330d17f00fcd/mfa
+#X-User-Id: 37dfa0e8-be26-4105-8d1b-f79c585483d9
+#X-User-Role: ROLE_ADMIN
+
+###
+# @name 10 - INTERNAL GET MFA DATA
+POST http://localhost:8083/internal/users/mfa
+X-Internal-Secret: 8/519tssNgJsQD6QxP+fCQjhqRrva7chybpCYvRUQGY=
+Content-Type: application/json
+
+{
+  "username": "u"
+}
