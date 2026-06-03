@@ -49,8 +49,6 @@ services:
     ports:
       - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
     depends_on:
-      user-service:
-        condition: service_healthy
       auth-redis:
         condition: service_healthy
     environment:
