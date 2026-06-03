@@ -12,32 +12,6 @@ spring:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
-      # Lettuce to klient Redis wbudowany w Spring Boot — biblioteka która fizycznie łączy się
-      # z Redis i wysyła komendy (GET, SET, DEL). Sekcja pool konfiguruje pulę połączeń — czyli
-      # zestaw gotowych, otwartych połączeń do Redis które są wielokrotnie używane zamiast otwierać
-      # nowe połączenie przy każdym requeście.
-
-      # max-active: 20
-      # maksymalnie 20 połączeń otwartych jednocześnie.
-      # Jeśli auth-service obsługuje 1000 requestów naraz,
-      # wszystkie dzielą te 20 połączeń — kolejkują się.
-
-      # max-idle: 10
-      # maksymalnie 10 połączeń "czeka w rezerwie" gdy nie ma ruchu.
-      # Reszta jest zamykana żeby nie marnować zasobów.
-
-      # min-idle: 2
-      # minimum 2 połączenia zawsze otwarte, nawet przy zerowym ruchu.
-      # Dzięki temu pierwsze requesty po ciszy nie czekają
-      # na nawiązanie połączenia.
-
-      # max-wait: 2000ms
-      # jeśli wszystkie 20 połączeń jest zajętych,
-      # request czeka max 2 sekundy na wolne połączenie.
-      # Po 2s → wyjątek → 502 dla klienta.
-
-      # Bez sekcji pool Lettuce działa w trybie single connection — jedno połączenie dla wszystkich
-      # wątków, co przy virtual threads i dużym ruchu tworzy wąskie gardło.
       lettuce:
         pool:
           max-active: 20
@@ -58,11 +32,5 @@ user-service:
 
 mfa:
   cache:
-    # TTL w sekundach — po tym czasie wpis wygasa z Redis.
-    # 60s: bezpieczne bo window TOTP = 30s, całe logowanie MFA trwa < 60s.
-    # Przy wielu instancjach auth-service: wszystkie czytają z tego samego Redis.
-    # Secret pobierany z user-service DOKŁADNIE RAZ per sesja MFA.
     ttl-seconds: 60
-    # Prefix klucza w Redis — pozwala mieć wiele aplikacji na tym samym Redis.
-    # Format klucza: mfa:secret:<username>
     key-prefix: "mfa:secret:"
