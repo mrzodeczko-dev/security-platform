@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.RestClientResponseException;
@@ -27,6 +28,12 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
         log.warn("Validation failed: {}", message);
         return ResponseEntity.badRequest().body(ApiResponseDto.error(message));
+    }
+
+    @ExceptionHandler(MissingRequestCookieException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleMissingCookie(MissingRequestCookieException e) {
+        log.warn("Missing required cookie: {}", e.getMessage());
+        return ResponseEntity.badRequest().body(ApiResponseDto.error(e.getMessage()));
     }
 
     @ExceptionHandler(InvalidTokenException.class)
