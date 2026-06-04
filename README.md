@@ -21,6 +21,7 @@ Auth Service is a production-ready backend responsible for authenticating users 
 - [🛠️ Common Issues](#common-issues)
 - [🏗️ Architecture](#architecture)
 - [💻 Tech Stack](#tech-stack)
+- [🧪 Testing](#testing)
 - [📂 Repository Structure](#repository-structure)
 - [🤝 Contact](#contact)
 
@@ -328,11 +329,74 @@ graph LR
 | JWT | JJWT 0.12.5 (jjwt-api / jjwt-impl / jjwt-jackson) |
 | MFA | Google Authenticator (`googleauth` 1.5.0) |
 | Build | Maven 3.9 |
-| Testing | JUnit 5 |
+| Testing | JUnit 5, Testcontainers 1.21, WireMock 3.10, Mockito 5 |
 | Containerisation | Docker, multi-stage build |
 | Observability | Spring Boot Actuator |
 | Utilities | Lombok |
 
+
+---
+
+<a id="testing"></a>
+## 🧪 Testing
+[Back to Table of Contents](#toc)
+
+The service has a full integration test suite covering all HTTP endpoints and infrastructure adapters. Tests run against real infrastructure (Redis via Testcontainers) and a stubbed HTTP server (WireMock) that simulates User Service. No mocks replace real Spring beans except `MfaVerificationPort` (TOTP verification), which is swapped with a Mockito bean to avoid time-sensitive TOTP code generation in tests.
+
+### Running Tests
+
+```bash
+mvn test
+```
+
+Docker must be running — Testcontainers starts a `redis:8.2-alpine` container automatically before the tests execute.
+
+### Test Infrastructure
+
+| Component | Technology | Role |
+|-----------|------------|------|
+| Redis | Testcontainers `redis:8.2-alpine` | Real Redis instance for cache tests |
+| User Service | WireMock 3.10.0 | HTTP stub replacing the real User Service |
+| TOTP verification | Mockito `@MockitoBean` | Bypasses time-sensitive TOTP code checks |
+
+**Base classes:**
+
+- **`AbstractRedisIntegrationTest`** — starts a `redis:8.2-alpine` container via `@Container` static field; registers `spring.data.redis.*` properties via `@DynamicPropertySource`.
+- **`AbstractWireMockIntegrationTest`** — extends the above; starts WireMock on a dynamic port with HTTP/2 disabled (`.http2PlainDisabled(true)` — prevents RST_STREAM issues with Spring Boot 4's default JDK HTTP client); registers `user-service.url` dynamically; resets all stubs in `@BeforeEach`.
+
+### Test Classes
+
+#### `AuthControllerIT` — 13 tests
+
+Full-stack Spring MVC integration test (`@SpringBootTest` + `@AutoConfigureMockMvc`). Covers all four endpoints with a real Spring context, real Redis, and WireMock for the User Service.
+
+| Test | Scenario |
+|------|----------|
+| `login_noMfa_returns201WithAccessTokenAndRefreshCookie` | Happy path — no MFA: access token in body, HttpOnly refresh cookie set |
+| `login_mfaRequired_returns200WithMfaFlag` | MFA path — service returns `mfaRequired: true` with username, no token issued |
+| `login_blankUsername_returns400` | Bean Validation — blank username rejected |
+| `login_blankPassword_returns400` | Bean Validation — blank password rejected |
+| `login_userServiceReturns401_propagates401` | Upstream error — 401 from User Service propagated as 401 |
+| `mfa_validCode_returns201WithAccessTokenAndCookie` | MFA happy path — correct TOTP code issues full token pair |
+| `mfa_invalidCode_returns401` | MFA failure — wrong TOTP code returns 401 with error body |
+| `mfa_codeOutOfRange_returns400` | Bean Validation — code below 100 000 rejected |
+| `mfa_userNotInCacheAndUserServiceReturns404_propagates404` | Cache miss fallback — service calls User Service; 404 response propagated |
+| `refresh_validCookie_returns201WithNewToken` | Token refresh — valid refresh cookie issues new access token |
+| `refresh_noCookie_returns400` | Missing cookie — `MissingRequestCookieException` handled as 400 |
+| `refresh_invalidToken_returns401` | Invalid JWT in cookie — 401 |
+| `logout_returns200AndExpiresRefreshCookie` | Logout — `refresh-token` cookie Max-Age set to 0 |
+
+#### `RedisMfaCacheAdapterIT` — 5 tests
+
+Infrastructure test against real Redis (no WireMock, no Spring MVC). Extends `AbstractRedisIntegrationTest` directly.
+
+| Test | Scenario |
+|------|----------|
+| `put_thenGet_returnsStoredValue` | Store and retrieve `MfaData` — all fields preserved after serialization |
+| `get_missingKey_returnsEmpty` | Cache miss — returns `Optional.empty()` |
+| `invalidate_removesEntry` | Invalidation — entry deleted from Redis |
+| `put_overwritesExistingEntry` | Second `put` for the same key replaces the previous value |
+| `get_preservesUuid` | UUID is correctly serialized and deserialized via Jackson |
 
 ---
 
@@ -382,8 +446,19 @@ graph LR
 │   │   │       └── application.yaml          # App config (virtual threads, Redis pool,
 │   │   │                                     #   JWT expiry, user-service URL, MFA TTL)
 │   │   └── test/
-│   │       └── java/com/rzodeczko/
-│   │           └── AuthServiceApplicationTests.java   # Spring context smoke test
+│   │       ├── java/com/rzodeczko/
+│   │       │   ├── infrastructure/
+│   │       │   │   └── cache/
+│   │       │   │       └── RedisMfaCacheAdapterIT.java  # Redis adapter integration tests
+│   │       │   ├── presentation/
+│   │       │   │   └── controller/
+│   │       │   │       └── AuthControllerIT.java        # Full-stack endpoint tests
+│   │       │   └── support/
+│   │       │       ├── AbstractRedisIntegrationTest.java  # Testcontainers Redis base
+│   │       │       └── AbstractWireMockIntegrationTest.java  # WireMock base
+│   │       └── resources/
+│   │           └── application.yaml                    # Test config (JWT secret, Redis,
+│   │                                                   #   WireMock URL placeholder)
 │   ├── Dockerfile                            # Multi-stage build (maven → jre-alpine, non-root user)
 │   └── pom.xml                               # Maven build descriptor
 └── docker-compose.yml                        # auth-service + auth-redis (Redis 8.2)
