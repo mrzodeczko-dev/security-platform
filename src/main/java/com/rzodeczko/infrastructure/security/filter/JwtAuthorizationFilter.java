@@ -1,4 +1,5 @@
-package com.rzodeczko.infrastructure.filter;
+package com.rzodeczko.infrastructure.security.filter;
+
 
 import com.rzodeczko.application.port.TokenVerificationPort;
 import com.rzodeczko.domain.exception.InvalidTokenException;
