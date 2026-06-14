@@ -12,7 +12,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: auth-service
+        working-directory: user-service
 
     steps:
       - name: Checkout code
