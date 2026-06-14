@@ -40,16 +40,13 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}"
 LABEL org.opencontainers.image.revision="${GIT_COMMIT}"
 LABEL org.opencontainers.image.vendor="YourCompany"
 
-
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-
 
 COPY --from=build --chown=appuser:appgroup /build/target/extracted/lib/   ./lib/
 COPY --from=build --chown=appuser:appgroup /build/target/extracted/*.jar  ./
 
 USER appuser
-
 
 EXPOSE 8085
 
