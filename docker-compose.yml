@@ -1,0 +1,195 @@
+services:
+  # --------------------------------------------------------------------------------------------------------------------
+  # USER MYSQL
+  # --------------------------------------------------------------------------------------------------------------------
+  user-mysql:
+    image: mysql:9.6.0
+    restart: unless-stopped
+    volumes:
+      - user-mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${USER_SERVICE_MYSQL_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${USER_SERVICE_MYSQL_DB_NAME}
+      MYSQL_USER: ${USER_SERVICE_MYSQL_DB_USER}
+      MYSQL_PASSWORD: ${USER_SERVICE_MYSQL_DB_PASSWORD}
+    command: >
+      --default-time-zone='+00:00'
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=${USER_SERVICE_MYSQL_INNODB_BUFFER_POOL_SIZE}
+      --max-connections=${USER_SERVICE_MYSQL_MAX_CONNECTIONS}
+    ports:
+      - '${USER_SERVICE_MYSQL_DB_PORT}:3306'
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    healthcheck:
+      test: [ "CMD-SHELL", "mysql -h localhost -u $$MYSQL_USER -p$$MYSQL_PASSWORD -e \"SELECT 1 FROM information_schema.schemata WHERE schema_name='$$MYSQL_DATABASE'\"" ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - mr-network
+
+  # --------------------------------------------------------------------------------------------------------------------
+  # AUTH REDIS
+  # --------------------------------------------------------------------------------------------------------------------
+  auth-redis:
+    image: redis:8.2-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --bind 0.0.0.0
+      --protected-mode yes
+      --requirepass ${AUTH_REDIS_PASSWORD}
+      --appendonly yes
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - auth-redis-data:/data
+    expose:
+      - "6379"
+    deploy:
+      resources:
+        limits:
+          # 192MB > 128MB (limit Redis) — różnica to overhead procesu Redis,
+          # bufory I/O i AOF rewrite który tymczasowo potrzebuje dodatkowej pamięci.
+          memory: 192M
+          # 0.5 CPU — Redis jest jednowątkowy dla operacji (event loop).
+          # Więcej CPU nie przyspieszy operacji GET/SET.
+          cpus: "0.5"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${AUTH_REDIS_PASSWORD}", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mr-network
+
+  # --------------------------------------------------------------------------------------------------------------------
+  # USER SERVICE
+  # --------------------------------------------------------------------------------------------------------------------
+  user-service:
+    image: mrzodeczko/users-service-security:1.0.0
+    restart: on-failure:5
+    ports:
+      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
+    depends_on:
+      user-mysql:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: ${USER_SERVICE_APPLICATION_NAME}
+      SPRING_DATASOURCE_URL: jdbc:mysql://${USER_SERVICE_MYSQL_DB_HOST}:3306/${USER_SERVICE_MYSQL_DB_NAME}?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${USER_SERVICE_MYSQL_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${USER_SERVICE_MYSQL_DB_PASSWORD}
+      SERVER_PORT: ${USER_SERVICE_PORT}
+      MAIL_HOST: ${USER_SERVICE_MAIL_HOST}
+      MAIL_USERNAME: ${USER_SERVICE_MAIL_USERNAME}
+      MAIL_PASSWORD: ${USER_SERVICE_MAIL_PASSWORD}
+      MAIL_PORT: ${USER_SERVICE_MAIL_PORT}
+      INTERNAL_SECRET: ${USER_SERVICE_INTERNAL_SECRET}
+      MFA_ISSUER: ${USER_SERVICE_MFA_ISSUER}
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: "1.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - mr-network
+
+  # --------------------------------------------------------------------------------------------------------------------
+  # AUTH SERVICE
+  # --------------------------------------------------------------------------------------------------------------------
+  auth-service:
+    image: mrzodeczko/auth-service-security:1.0.0
+    restart: on-failure:5
+    ports:
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+    depends_on:
+      user-service:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: ${AUTH_SERVICE_APPLICATION_NAME}
+      SERVER_PORT: ${AUTH_SERVICE_PORT}
+      JWT_SECRET: ${AUTH_JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION_MS: ${AUTH_JWT_ACCESS_TOKEN_EXPIRATION_MS}
+      JWT_REFRESH_TOKEN_EXPIRATION_MS: ${AUTH_JWT_REFRESH_TOKEN_EXPIRATION_MS}
+      USER_SERVICE_URL: ${AUTH_USER_SERVICE_URL}
+      INTERNAL_SECRET: ${AUTH_SERVICE_INTERNAL_SECRET}
+      REDIS_HOST: ${AUTH_REDIS_HOST}
+      REDIS_PORT: ${AUTH_REDIS_PORT}
+      REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - mr-network
+
+  # --------------------------------------------------------------------------------------------------------------------
+  # API GATEWAY SERVICE
+  # --------------------------------------------------------------------------------------------------------------------
+  api-gateway-service:
+    build:
+      context: ./api-gateway-service
+      dockerfile: Dockerfile
+    restart: on-failure:5
+    ports:
+      - "${API_GATEWAY_SERVICE_PORT}:${API_GATEWAY_SERVICE_PORT}"
+    depends_on:
+      user-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: ${API_GATEWAY_SERVICE_APPLICATION_NAME}
+      SERVER_PORT: ${API_GATEWAY_SERVICE_PORT}
+      JWT_SECRET: ${API_GATEWAY_JWT_SECRET}
+      AUTH_SERVICE_URL: ${API_GATEWAY_AUTH_SERVICE_URL}
+      USER_SERVICE_URL: ${API_GATEWAY_USER_SERVICE_URL}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - mr-network
+
+volumes:
+  user-mysql:
+  auth-redis-data:
+
+networks:
+  mr-network:
