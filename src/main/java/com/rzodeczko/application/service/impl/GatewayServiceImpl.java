@@ -39,7 +39,7 @@ public class GatewayServiceImpl implements GatewayService {
         // Whitelist-only header forwarding - prevents client-injected X-User-* spoofing
         Map<String, List<String>> forwardedHeaders = new HashMap<>();
 
-        var safeHeaders = List.of("content-type", "accept", "cache-control");
+        var safeHeaders = List.of("content-type", "accept", "cache-control", "cookie");
         request.headers().forEach((name, values) -> {
             if (safeHeaders.contains(name.toLowerCase())) {
                 forwardedHeaders.put(name, new ArrayList<>(values));
