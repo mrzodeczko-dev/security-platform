@@ -1,4 +1,4 @@
-package com.rzodeczko.presentation.dto.response;
+package com.rzodeczko.presentation.dto;
 
 public record HealthCheckResponseDto(String message) {
 }
