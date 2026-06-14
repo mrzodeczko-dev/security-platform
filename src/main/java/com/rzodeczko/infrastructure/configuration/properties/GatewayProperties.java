@@ -21,6 +21,7 @@ public record GatewayProperties(
     public record ForwardingProperties(Long connectTimeoutMs, Long readTimeoutMs) {
     }
 
+    // Szuka pierwszej trasy gdzie sciezka requestu zaczyna sie od prefiksu
     public Optional<String> resolveTarget(String requestPath) {
         return routes
                 .stream()
@@ -29,6 +30,7 @@ public record GatewayProperties(
                 .map(RouteDefinition::target);
     }
 
+    // Format w YAML: "POST:/auth/login" -> split po ":" -> ["POST", "auth/login"]
     public boolean isPublicPath(String method, String path) {
         return publicPaths
                 .stream()
