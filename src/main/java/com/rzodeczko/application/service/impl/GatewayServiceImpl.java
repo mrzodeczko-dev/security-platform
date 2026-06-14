@@ -36,7 +36,7 @@ public class GatewayServiceImpl implements GatewayService {
                 .resolveTarget(request.path())
                 .orElseThrow(() -> new RouteNotFoundException(request.path()));
 
-        // Whitelist-only header forwarding — prevents client-injected X-User-* spoofing
+        // Whitelist-only header forwarding - prevents client-injected X-User-* spoofing
         Map<String, List<String>> forwardedHeaders = new HashMap<>();
 
         var safeHeaders = List.of("content-type", "accept", "cache-control");
