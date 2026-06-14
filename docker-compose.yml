@@ -158,7 +158,7 @@ services:
   # --------------------------------------------------------------------------------------------------------------------
   api-gateway-service:
     build:
-      context: ./api-gateway-service
+      context: .
       dockerfile: Dockerfile
     restart: on-failure:5
     ports:
