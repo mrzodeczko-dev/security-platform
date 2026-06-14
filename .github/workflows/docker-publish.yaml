@@ -17,10 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: ci
 
-    defaults:
-      run:
-        working-directory: security-auth-service
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -37,8 +33,8 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: Dockerfile
+          context: ./auth-service
+          file: ./auth-service/Dockerfile
           push: true
           provenance: false
           tags: |
