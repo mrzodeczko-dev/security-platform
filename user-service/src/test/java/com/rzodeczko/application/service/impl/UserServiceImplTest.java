@@ -14,7 +14,6 @@ import com.rzodeczko.domain.model.User;
 import com.rzodeczko.domain.model.VerificationCode;
 import com.rzodeczko.domain.repository.UserRepository;
 import com.rzodeczko.domain.repository.VerificationCodeRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,16 +22,20 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({MockitoExtension.class,})
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 class UserServiceImplTest {
 
     @Mock
@@ -87,7 +90,7 @@ class UserServiceImplTest {
 
             String result = userService.register(command);
 
-            assertEquals(USERNAME, result);
+            assertThat(result).isEqualTo(USERNAME);
             verify(userRepository).save(any(User.class));
             verify(eventPublisher).publishUserRegistered(any(UserRegisteredEvent.class));
         }
@@ -98,7 +101,8 @@ class UserServiceImplTest {
             var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.USER);
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(createEnabledUser()));
 
-            assertThrows(UsernameAlreadyExistsException.class, () -> userService.register(command));
+            assertThatThrownBy(() -> userService.register(command))
+                    .isInstanceOf(UsernameAlreadyExistsException.class);
             verify(userRepository, never()).save(any());
         }
 
@@ -109,7 +113,8 @@ class UserServiceImplTest {
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(createEnabledUser()));
 
-            assertThrows(EmailAlreadyExistsException.class, () -> userService.register(command));
+            assertThatThrownBy(() -> userService.register(command))
+                    .isInstanceOf(EmailAlreadyExistsException.class);
             verify(userRepository, never()).save(any());
         }
 
@@ -120,7 +125,8 @@ class UserServiceImplTest {
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
-            assertThrows(PasswordMismatchException.class, () -> userService.register(command));
+            assertThatThrownBy(() -> userService.register(command))
+                    .isInstanceOf(PasswordMismatchException.class);
             verify(userRepository, never()).save(any());
         }
 
@@ -137,7 +143,71 @@ class UserServiceImplTest {
 
             var captor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(captor.capture());
-            assertEquals(ENCODED_PASSWORD, captor.getValue().getPassword());
+            assertThat(captor.getValue().getPassword()).isEqualTo(ENCODED_PASSWORD);
+        }
+
+        @Test
+        @DisplayName("should create user with correct role from command")
+        void shouldCreateUser_withCorrectRole() {
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.ADMIN);
+            var savedUser = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.ADMIN, false, null, null);
+
+            when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
+            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+            when(passwordEncoder.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
+            when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+            userService.register(command);
+
+            var captor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(captor.capture());
+            assertThat(captor.getValue().getRole()).isEqualTo(Role.ADMIN);
+        }
+
+        @Test
+        @DisplayName("should create user as disabled")
+        void shouldCreateUser_asDisabled() {
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.USER);
+            when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
+            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+            when(passwordEncoder.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
+            when(userRepository.save(any(User.class))).thenReturn(createDisabledUser());
+
+            userService.register(command);
+
+            var captor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(captor.capture());
+            assertThat(captor.getValue().isEnabled()).isFalse();
+        }
+
+        @Test
+        @DisplayName("should publish event with saved user ID")
+        void shouldPublishEvent_withSavedUserId() {
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.USER);
+            var savedUser = createDisabledUser();
+
+            when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
+            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+            when(passwordEncoder.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
+            when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+            userService.register(command);
+
+            var captor = ArgumentCaptor.forClass(UserRegisteredEvent.class);
+            verify(eventPublisher).publishUserRegistered(captor.capture());
+            assertThat(captor.getValue().userId()).isEqualTo(USER_ID);
+        }
+
+        @Test
+        @DisplayName("should not publish event when validation fails")
+        void shouldNotPublishEvent_whenValidationFails() {
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, "other", Role.USER);
+            when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
+            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.register(command))
+                    .isInstanceOf(PasswordMismatchException.class);
+            verify(eventPublisher, never()).publishUserRegistered(any());
         }
     }
 
@@ -162,8 +232,8 @@ class UserServiceImplTest {
 
             String result = userService.activate(code);
 
-            assertEquals(USERNAME, result);
-            assertTrue(user.isEnabled());
+            assertThat(result).isEqualTo(USERNAME);
+            assertThat(user.isEnabled()).isTrue();
             verify(verificationCodeRepository).delete(vc);
         }
 
@@ -172,7 +242,8 @@ class UserServiceImplTest {
         void shouldThrow_whenCodeNotFound() {
             when(verificationCodeRepository.findByCode("bad-code")).thenReturn(Optional.empty());
 
-            assertThrows(VerificationCodeNotFoundException.class, () -> userService.activate("bad-code"));
+            assertThatThrownBy(() -> userService.activate("bad-code"))
+                    .isInstanceOf(VerificationCodeNotFoundException.class);
         }
 
         @Test
@@ -184,7 +255,8 @@ class UserServiceImplTest {
 
             when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
 
-            assertThrows(VerificationCodeExpiredException.class, () -> userService.activate(code));
+            assertThatThrownBy(() -> userService.activate(code))
+                    .isInstanceOf(VerificationCodeExpiredException.class);
             verify(verificationCodeRepository).delete(vc);
         }
 
@@ -199,7 +271,87 @@ class UserServiceImplTest {
             when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
-            assertThrows(UserAlreadyActivatedException.class, () -> userService.activate(code));
+            assertThatThrownBy(() -> userService.activate(code))
+                    .isInstanceOf(UserAlreadyActivatedException.class);
+        }
+
+        @Test
+        @DisplayName("should throw when user not found for valid code")
+        void shouldThrow_whenUserNotFoundForValidCode() {
+            String code = "valid-code";
+            long futureExpiry = Instant.now().toEpochMilli() + 600_000;
+            var vc = new VerificationCode(UUID.randomUUID(), code, futureExpiry, USER_ID);
+
+            when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.activate(code))
+                    .isInstanceOf(UserNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should save activated user")
+        void shouldSaveActivatedUser() {
+            String code = "valid-code";
+            long futureExpiry = Instant.now().toEpochMilli() + 600_000;
+            var vc = new VerificationCode(UUID.randomUUID(), code, futureExpiry, USER_ID);
+            var user = createDisabledUser();
+
+            when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(userRepository.save(any(User.class))).thenReturn(user);
+
+            userService.activate(code);
+
+            var captor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(captor.capture());
+            assertThat(captor.getValue().isEnabled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should delete verification code after successful activation")
+        void shouldDeleteCode_afterSuccessfulActivation() {
+            String code = "valid-code";
+            long futureExpiry = Instant.now().toEpochMilli() + 600_000;
+            var vc = new VerificationCode(UUID.randomUUID(), code, futureExpiry, USER_ID);
+            var user = createDisabledUser();
+
+            when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(userRepository.save(any(User.class))).thenReturn(user);
+
+            userService.activate(code);
+
+            verify(verificationCodeRepository).delete(vc);
+        }
+
+        @Test
+        @DisplayName("should delete verification code when user already activated")
+        void shouldDeleteCode_whenUserAlreadyActivated() {
+            String code = "valid-code";
+            long futureExpiry = Instant.now().toEpochMilli() + 600_000;
+            var vc = new VerificationCode(UUID.randomUUID(), code, futureExpiry, USER_ID);
+
+            when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(createEnabledUser()));
+
+            assertThatThrownBy(() -> userService.activate(code))
+                    .isInstanceOf(UserAlreadyActivatedException.class);
+            verify(verificationCodeRepository).delete(vc);
+        }
+
+        @Test
+        @DisplayName("should not save user when code is expired")
+        void shouldNotSaveUser_whenCodeExpired() {
+            String code = "expired-code";
+            long pastExpiry = Instant.now().toEpochMilli() - 600_000;
+            var vc = new VerificationCode(UUID.randomUUID(), code, pastExpiry, USER_ID);
+
+            when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
+
+            assertThatThrownBy(() -> userService.activate(code))
+                    .isInstanceOf(VerificationCodeExpiredException.class);
+            verify(userRepository, never()).save(any());
         }
     }
 
@@ -221,10 +373,14 @@ class UserServiceImplTest {
 
             UserCredentialsResultDto result = userService.verifyCredentials(command);
 
-            assertEquals(USER_ID, result.userId());
-            assertEquals(USERNAME, result.username());
-            assertEquals("ROLE_USER", result.role());
-            assertFalse(result.mfaRequired());
+            assertThat(result)
+                    .extracting(
+                            UserCredentialsResultDto::userId,
+                            UserCredentialsResultDto::username,
+                            UserCredentialsResultDto::role,
+                            UserCredentialsResultDto::mfaRequired
+                    )
+                    .containsExactly(USER_ID, USERNAME, "ROLE_USER", false);
         }
 
         @Test
@@ -233,7 +389,8 @@ class UserServiceImplTest {
             var command = new VerifyCredentialsCommand("ghost", PASSWORD);
             when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
-            assertThrows(InvalidCredentialsException.class, () -> userService.verifyCredentials(command));
+            assertThatThrownBy(() -> userService.verifyCredentials(command))
+                    .isInstanceOf(InvalidCredentialsException.class);
         }
 
         @Test
@@ -242,7 +399,8 @@ class UserServiceImplTest {
             var command = new VerifyCredentialsCommand(USERNAME, PASSWORD);
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(createDisabledUser()));
 
-            assertThrows(UserNotActivatedException.class, () -> userService.verifyCredentials(command));
+            assertThatThrownBy(() -> userService.verifyCredentials(command))
+                    .isInstanceOf(UserNotActivatedException.class);
         }
 
         @Test
@@ -254,7 +412,36 @@ class UserServiceImplTest {
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
             when(passwordEncoder.matches("wrongPass", ENCODED_PASSWORD)).thenReturn(false);
 
-            assertThrows(InvalidCredentialsException.class, () -> userService.verifyCredentials(command));
+            assertThatThrownBy(() -> userService.verifyCredentials(command))
+                    .isInstanceOf(InvalidCredentialsException.class);
+        }
+
+        @Test
+        @DisplayName("should return mfaRequired true when user has MFA active")
+        void shouldReturnMfaRequired_whenMfaActive() {
+            var user = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.USER, true, "secret", "qrUrl");
+            var command = new VerifyCredentialsCommand(USERNAME, PASSWORD);
+
+            when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches(PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
+
+            UserCredentialsResultDto result = userService.verifyCredentials(command);
+
+            assertThat(result.mfaRequired()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return correct role for admin user")
+        void shouldReturnCorrectRole_forAdmin() {
+            var admin = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.ADMIN, true, null, null);
+            var command = new VerifyCredentialsCommand(USERNAME, PASSWORD);
+
+            when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(admin));
+            when(passwordEncoder.matches(PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
+
+            UserCredentialsResultDto result = userService.verifyCredentials(command);
+
+            assertThat(result.role()).isEqualTo("ROLE_ADMIN");
         }
     }
 
@@ -277,7 +464,7 @@ class UserServiceImplTest {
 
             String result = userService.resetPassword(command);
 
-            assertEquals(USERNAME, result);
+            assertThat(result).isEqualTo(USERNAME);
             verify(passwordEncoder).encode("newPass");
         }
 
@@ -286,7 +473,8 @@ class UserServiceImplTest {
         void shouldThrow_whenPasswordsMismatch() {
             var command = new ResetPasswordCommand(EMAIL, "pass1", "pass2");
 
-            assertThrows(PasswordMismatchException.class, () -> userService.resetPassword(command));
+            assertThatThrownBy(() -> userService.resetPassword(command))
+                    .isInstanceOf(PasswordMismatchException.class);
         }
 
         @Test
@@ -295,7 +483,43 @@ class UserServiceImplTest {
             var command = new ResetPasswordCommand(EMAIL, "newPass", "newPass");
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(createDisabledUser()));
 
-            assertThrows(UserNotActivatedException.class, () -> userService.resetPassword(command));
+            assertThatThrownBy(() -> userService.resetPassword(command))
+                    .isInstanceOf(UserNotActivatedException.class);
+        }
+
+        @Test
+        @DisplayName("should throw when user not found by email")
+        void shouldThrow_whenUserNotFound() {
+            var command = new ResetPasswordCommand("unknown@x.com", "newPass", "newPass");
+            when(userRepository.findByEmail("unknown@x.com")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.resetPassword(command))
+                    .isInstanceOf(UserNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should update password with encoded value")
+        void shouldUpdatePassword_withEncodedValue() {
+            var command = new ResetPasswordCommand(EMAIL, "newPass", "newPass");
+            var user = createEnabledUser();
+
+            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+            when(passwordEncoder.encode("newPass")).thenReturn("$encoded$newPass");
+            when(userRepository.save(any(User.class))).thenReturn(user);
+
+            userService.resetPassword(command);
+
+            assertThat(user.getPassword()).isEqualTo("$encoded$newPass");
+        }
+
+        @Test
+        @DisplayName("should not encode password when passwords mismatch")
+        void shouldNotEncodePassword_whenPasswordsMismatch() {
+            var command = new ResetPasswordCommand(EMAIL, "pass1", "pass2");
+
+            assertThatThrownBy(() -> userService.resetPassword(command))
+                    .isInstanceOf(PasswordMismatchException.class);
+            verify(passwordEncoder, never()).encode(any());
         }
     }
 
@@ -321,7 +545,7 @@ class UserServiceImplTest {
 
             String result = userService.changeUserRole(command);
 
-            assertEquals("target", result);
+            assertThat(result).isEqualTo("target");
         }
 
         @Test
@@ -329,7 +553,8 @@ class UserServiceImplTest {
         void shouldThrow_whenNotAdminRole() {
             var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, UUID.randomUUID(), "ROLE_USER");
 
-            assertThrows(InsufficientRoleException.class, () -> userService.changeUserRole(command));
+            assertThatThrownBy(() -> userService.changeUserRole(command))
+                    .isInstanceOf(InsufficientRoleException.class);
         }
 
         @Test
@@ -337,7 +562,8 @@ class UserServiceImplTest {
         void shouldThrow_whenRequestingUserIdNull() {
             var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, null, "ROLE_ADMIN");
 
-            assertThrows(InsufficientRoleException.class, () -> userService.changeUserRole(command));
+            assertThatThrownBy(() -> userService.changeUserRole(command))
+                    .isInstanceOf(InsufficientRoleException.class);
         }
 
         @Test
@@ -349,7 +575,65 @@ class UserServiceImplTest {
 
             when(userRepository.findById(userId)).thenReturn(Optional.of(notAdmin));
 
-            assertThrows(InsufficientRoleException.class, () -> userService.changeUserRole(command));
+            assertThatThrownBy(() -> userService.changeUserRole(command))
+                    .isInstanceOf(InsufficientRoleException.class);
+        }
+
+        @Test
+        @DisplayName("should throw when requesting user not found in database")
+        void shouldThrow_whenRequestingUserNotFoundInDb() {
+            UUID adminId = UUID.randomUUID();
+            var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, adminId, "ROLE_ADMIN");
+
+            when(userRepository.findById(adminId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.changeUserRole(command))
+                    .isInstanceOf(InsufficientRoleException.class);
+        }
+
+        @Test
+        @DisplayName("should throw when target user not found")
+        void shouldThrow_whenTargetUserNotFound() {
+            UUID adminId = UUID.randomUUID();
+            UUID targetId = UUID.randomUUID();
+            var command = new ChangeUserRoleCommand(targetId, Role.ADMIN, adminId, "ROLE_ADMIN");
+            var admin = new User(adminId, "admin", "admin@x.com", ENCODED_PASSWORD, Role.ADMIN, true, null, null);
+
+            when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
+            when(userRepository.findById(targetId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.changeUserRole(command))
+                    .isInstanceOf(UserNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should actually change role on target user")
+        void shouldActuallyChangeRole_onTargetUser() {
+            UUID adminId = UUID.randomUUID();
+            UUID targetId = UUID.randomUUID();
+            var command = new ChangeUserRoleCommand(targetId, Role.ADMIN, adminId, "ROLE_ADMIN");
+            var admin = new User(adminId, "admin", "admin@x.com", ENCODED_PASSWORD, Role.ADMIN, true, null, null);
+            var target = new User(targetId, "target", "target@x.com", ENCODED_PASSWORD, Role.USER, true, null, null);
+
+            when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
+            when(userRepository.findById(targetId)).thenReturn(Optional.of(target));
+            when(userRepository.save(any(User.class))).thenReturn(target);
+
+            userService.changeUserRole(command);
+
+            var captor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(captor.capture());
+            assertThat(captor.getValue().getRole()).isEqualTo(Role.ADMIN);
+        }
+
+        @Test
+        @DisplayName("should not save when role header is not ADMIN")
+        void shouldNotSave_whenRoleHeaderNotAdmin() {
+            var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, UUID.randomUUID(), "ROLE_USER");
+
+            assertThatThrownBy(() -> userService.changeUserRole(command))
+                    .isInstanceOf(InsufficientRoleException.class);
+            verify(userRepository, never()).save(any());
         }
     }
 
@@ -372,7 +656,7 @@ class UserServiceImplTest {
 
             String result = userService.setupMfa(USER_ID);
 
-            assertEquals(qrUrl, result);
+            assertThat(result).isEqualTo(qrUrl);
             verify(userRepository).save(user);
         }
 
@@ -383,7 +667,8 @@ class UserServiceImplTest {
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
-            assertThrows(MfaAlreadyActivatedException.class, () -> userService.setupMfa(USER_ID));
+            assertThatThrownBy(() -> userService.setupMfa(USER_ID))
+                    .isInstanceOf(MfaAlreadyActivatedException.class);
         }
 
         @Test
@@ -391,7 +676,40 @@ class UserServiceImplTest {
         void shouldThrow_whenUserNotFound() {
             when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
-            assertThrows(UserNotFoundException.class, () -> userService.setupMfa(USER_ID));
+            assertThatThrownBy(() -> userService.setupMfa(USER_ID))
+                    .isInstanceOf(UserNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should save MFA secret and QR URL on user")
+        void shouldSaveMfaSecretAndQrUrl_onUser() {
+            var user = createEnabledUser();
+            String secret = "TOTP_SECRET";
+            String qrUrl = "otpauth://totp/App:testuser?secret=TOTP_SECRET";
+
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(mfaSetup.generateCredentials(USERNAME)).thenReturn(new MfaSetupResultDto(secret, qrUrl));
+            when(userRepository.save(any(User.class))).thenReturn(user);
+
+            userService.setupMfa(USER_ID);
+
+            var captor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(captor.capture());
+            assertThat(captor.getValue().getMfaSecret()).isEqualTo(secret);
+            assertThat(captor.getValue().getMfaQrUrl()).isEqualTo(qrUrl);
+        }
+
+        @Test
+        @DisplayName("should not generate credentials when MFA already active")
+        void shouldNotGenerateCredentials_whenMfaAlreadyActive() {
+            var user = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.USER, true, "secret", "qrUrl");
+
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+            assertThatThrownBy(() -> userService.setupMfa(USER_ID))
+                    .isInstanceOf(MfaAlreadyActivatedException.class);
+            verify(mfaSetup, never()).generateCredentials(any());
+            verify(userRepository, never()).save(any());
         }
     }
 
@@ -412,10 +730,14 @@ class UserServiceImplTest {
 
             MfaDataResultDto result = userService.getMfaData(command);
 
-            assertEquals(USER_ID, result.userId());
-            assertEquals(USERNAME, result.username());
-            assertEquals("ROLE_USER", result.role());
-            assertEquals("mfaSecret", result.mfaSecret());
+            assertThat(result)
+                    .extracting(
+                            MfaDataResultDto::userId,
+                            MfaDataResultDto::username,
+                            MfaDataResultDto::role,
+                            MfaDataResultDto::mfaSecret
+                    )
+                    .containsExactly(USER_ID, USERNAME, "ROLE_USER", "mfaSecret");
         }
 
         @Test
@@ -423,7 +745,21 @@ class UserServiceImplTest {
         void shouldThrow_whenUserNotFound() {
             when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
-            assertThrows(UserNotFoundException.class, () -> userService.getMfaData(new GetMfaDataCommand("ghost")));
+            assertThatThrownBy(() -> userService.getMfaData(new GetMfaDataCommand("ghost")))
+                    .isInstanceOf(UserNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should return null mfaSecret when user has no MFA")
+        void shouldReturnNullMfaSecret_whenNoMfa() {
+            var user = createEnabledUser(); // mfaSecret = null
+            var command = new GetMfaDataCommand(USERNAME);
+
+            when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
+
+            MfaDataResultDto result = userService.getMfaData(command);
+
+            assertThat(result.mfaSecret()).isNull();
         }
     }
 
@@ -443,7 +779,7 @@ class UserServiceImplTest {
 
             String result = userService.resendActivationCode(EMAIL);
 
-            assertEquals(USERNAME, result);
+            assertThat(result).isEqualTo(USERNAME);
             verify(eventPublisher).publishUserRegistered(any(UserRegisteredEvent.class));
         }
 
@@ -467,7 +803,34 @@ class UserServiceImplTest {
         void shouldThrow_whenEmailNotFound() {
             when(userRepository.findByEmail("noone@x.com")).thenReturn(Optional.empty());
 
-            assertThrows(UserNotFoundException.class, () -> userService.resendActivationCode("noone@x.com"));
+            assertThatThrownBy(() -> userService.resendActivationCode("noone@x.com"))
+                    .isInstanceOf(UserNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should publish event with correct user ID")
+        void shouldPublishEvent_withCorrectUserId() {
+            var user = createDisabledUser();
+            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+            when(verificationCodeRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+
+            userService.resendActivationCode(EMAIL);
+
+            var captor = ArgumentCaptor.forClass(UserRegisteredEvent.class);
+            verify(eventPublisher).publishUserRegistered(captor.capture());
+            assertThat(captor.getValue().userId()).isEqualTo(USER_ID);
+        }
+
+        @Test
+        @DisplayName("should not delete code when none exists")
+        void shouldNotDeleteCode_whenNoneExists() {
+            var user = createDisabledUser();
+            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+            when(verificationCodeRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+
+            userService.resendActivationCode(EMAIL);
+
+            verify(verificationCodeRepository, never()).delete(any());
         }
     }
 
@@ -491,7 +854,7 @@ class UserServiceImplTest {
 
             String result = userService.getPasswordResetPermission(code);
 
-            assertEquals(EMAIL, result);
+            assertThat(result).isEqualTo(EMAIL);
             verify(verificationCodeRepository).delete(vc);
         }
 
@@ -505,7 +868,59 @@ class UserServiceImplTest {
             when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(createDisabledUser()));
 
-            assertThrows(UserNotActivatedException.class, () -> userService.getPasswordResetPermission(code));
+            assertThatThrownBy(() -> userService.getPasswordResetPermission(code))
+                    .isInstanceOf(UserNotActivatedException.class);
+            verify(verificationCodeRepository).delete(vc);
+        }
+
+        @Test
+        @DisplayName("should throw when code not found")
+        void shouldThrow_whenCodeNotFound() {
+            when(verificationCodeRepository.findByCode("bad-code")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.getPasswordResetPermission("bad-code"))
+                    .isInstanceOf(VerificationCodeNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should throw when code is expired")
+        void shouldThrow_whenCodeExpired() {
+            String code = "expired-code";
+            long pastExpiry = Instant.now().toEpochMilli() - 600_000;
+            var vc = new VerificationCode(UUID.randomUUID(), code, pastExpiry, USER_ID);
+
+            when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
+
+            assertThatThrownBy(() -> userService.getPasswordResetPermission(code))
+                    .isInstanceOf(VerificationCodeExpiredException.class);
+            verify(verificationCodeRepository).delete(vc);
+        }
+
+        @Test
+        @DisplayName("should throw when user not found for valid code")
+        void shouldThrow_whenUserNotFoundForValidCode() {
+            String code = "reset-code";
+            long futureExpiry = Instant.now().toEpochMilli() + 600_000;
+            var vc = new VerificationCode(UUID.randomUUID(), code, futureExpiry, USER_ID);
+
+            when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.getPasswordResetPermission(code))
+                    .isInstanceOf(UserNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should delete code even when expired")
+        void shouldDeleteCode_evenWhenExpired() {
+            String code = "expired-code";
+            long pastExpiry = Instant.now().toEpochMilli() - 600_000;
+            var vc = new VerificationCode(UUID.randomUUID(), code, pastExpiry, USER_ID);
+
+            when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
+
+            assertThatThrownBy(() -> userService.getPasswordResetPermission(code))
+                    .isInstanceOf(VerificationCodeExpiredException.class);
             verify(verificationCodeRepository).delete(vc);
         }
     }
