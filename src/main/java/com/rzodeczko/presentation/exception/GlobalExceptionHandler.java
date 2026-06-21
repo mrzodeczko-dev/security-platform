@@ -1,6 +1,5 @@
 package com.rzodeczko.presentation.exception;
 
-
 import com.rzodeczko.domain.exception.DownstreamUnavailableException;
 import com.rzodeczko.domain.exception.InvalidTokenException;
 import com.rzodeczko.domain.exception.RouteNotFoundException;
