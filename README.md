@@ -294,74 +294,36 @@ Verify: `curl http://localhost:8085/actuator/health` -> `{"status":"UP"}`
 graph LR
     classDef presentation fill:#4a90d9,stroke:#2c5f8a,color:#fff
     classDef application fill:#7b68ee,stroke:#4a3aa0,color:#fff
-    classDef port fill:#9b59b6,stroke:#6c3483,color:#fff
     classDef domain fill:#27ae60,stroke:#1a7a42,color:#fff
     classDef infra fill:#e67e22,stroke:#a85a0f,color:#fff
     classDef external fill:#c0392b,stroke:#8e1a1a,color:#fff
 
-    subgraph PRESENTATION["Presentation"]
-        C([Client])
-        GC[GatewayController]
-        HC[HealthCheckController]
-        GEH[GlobalExceptionHandler]
-    end
+    C([Client]) --> GC[GatewayController]
 
     subgraph APPLICATION["Application"]
-        GS[GatewayServiceImpl]
-        subgraph PORTS["Ports"]
-            GP[GatewayPort]
-            FP[ForwardingPort]
-            TVP[TokenVerificationPort]
-        end
+        GC --> GP[GatewayPort] --> GS[GatewayServiceImpl]
     end
 
     subgraph DOMAIN["Domain"]
-        RT[RoutingTable]
-        GReq[GatewayRequest]
-        GRes[GatewayResponse]
-        TI[TokenInfo]
-        EX[RouteNotFoundException<br/>InvalidTokenException<br/>DownstreamUnavailableException<br/>PayloadTooLargeException]
+        GS --> RT[RoutingTable]
     end
 
     subgraph INFRASTRUCTURE["Infrastructure"]
-        subgraph SECURITY["Security Filters"]
-            SC[SecurityConfiguration]
-            JF[JwtAuthorizationFilter]
-            RLF[RateLimitFilter]
-            ALF[AccessLogFilter]
-        end
-        subgraph FORWARDING["Forwarding"]
-            HFA[HttpForwardingAdapter<br/>RestClient + CircuitBreaker]
-        end
-        subgraph TOKEN["Token"]
-            JTA[JwtTokenVerificationAdapter<br/>HMAC-SHA512]
-        end
-        subgraph CONFIG["Configuration"]
-            BC[BeanConfiguration]
-            GP2[GatewayProperties]
-            JP[JwtProperties]
-        end
+        JF[JwtAuthorizationFilter] --> JTA[JwtTokenVerificationAdapter]
+        RLF[RateLimitFilter] --> RD
+        GS --> FP[ForwardingPort] --> HFA[HttpForwardingAdapter<br/>CircuitBreaker]
     end
 
     subgraph EXTERNAL["External"]
-        AS[(Auth Service)]
-        US[(User Service)]
+        HFA --> AS[(Auth Service)]
+        HFA --> US[(User Service)]
         RD[(Redis)]
     end
 
-    C --> GC --> GP --> GS
-    GS --> FP --> HFA
-    GS --> RT
-    JF --> TVP --> JTA
-    RLF --> RD
-    HFA --> AS
-    HFA --> US
-
-    class C,GC,HC,GEH presentation
-    class GS application
-    class GP,FP,TVP port
-    class RT,GReq,GRes,TI,EX domain
-    class SC,JF,RLF,ALF,HFA,JTA,BC,GP2,JP infra
+    class C,GC presentation
+    class GP,GS application
+    class RT domain
+    class JF,JTA,RLF,HFA,FP infra
     class AS,US,RD external
 ```
 
