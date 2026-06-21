@@ -11,11 +11,13 @@ import java.util.Map;
  *
  * <p>headers: Map<String, List<String>> — a header may have multiple values.
  * body: byte[] — raw bytes; the gateway does not parse request body content.
+ * queryString: raw query string without the leading '?', may be null.
  */
 public record GatewayRequest(
         String path,
         String method,
         Map<String, List<String>> headers,
-        byte[] body
+        byte[] body,
+        String queryString
 ) {
 }

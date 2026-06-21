@@ -1,4 +1,4 @@
-package com.rzodeczko.application.service;
+package com.rzodeczko.application.port.in;
 
 import com.rzodeczko.domain.model.GatewayRequest;
 import com.rzodeczko.domain.model.GatewayResponse;
@@ -8,6 +8,6 @@ import com.rzodeczko.domain.model.GatewayResponse;
  *
  * <p>Accepts a domain request and trusted user data, returns the downstream response.
  */
-public interface GatewayService {
+public interface GatewayPort {
     GatewayResponse handle(GatewayRequest request, String userId, String username, String userRole);
 }

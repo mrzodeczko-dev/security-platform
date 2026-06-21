@@ -1,6 +1,6 @@
 package com.rzodeczko.presentation.controller;
 
-import com.rzodeczko.application.service.GatewayService;
+import com.rzodeczko.application.port.in.GatewayPort;
 import com.rzodeczko.domain.model.GatewayRequest;
 import com.rzodeczko.domain.model.GatewayResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,10 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * REST controller that accepts all incoming HTTP requests, converts them to the
@@ -29,7 +26,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class GatewayController {
-    private final GatewayService gatewayService;
+    private final GatewayPort gatewayService;
 
     /**
      * Handle any HTTP request, map it to a domain request and return downstream response.
@@ -62,9 +59,8 @@ public class GatewayController {
         var headersNames = request.getHeaderNames();
         while (headersNames.hasMoreElements()) {
             var name = headersNames.nextElement();
-            headers
-                    .computeIfAbsent(name, k -> new ArrayList<>())
-                    .add(request.getHeader(name));
+            var values = Collections.list(request.getHeaders(name));
+            headers.put(name, values);
         }
 
         // Servlet input stream is single-use - read it once into a byte array
@@ -75,7 +71,8 @@ public class GatewayController {
                 request.getRequestURI(),
                 request.getMethod(),
                 headers,
-                body
+                body,
+                request.getQueryString()
         );
 
         log.debug("Gateway: {} {} userId={}", request.getMethod(), request.getRequestURI(), userId);

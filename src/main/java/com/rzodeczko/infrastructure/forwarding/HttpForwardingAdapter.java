@@ -39,9 +39,13 @@ public class HttpForwardingAdapter implements ForwardingPort {
     public GatewayResponse forward(String targetBaseUrl, GatewayRequest request) {
         log.debug("Forwarding {} {} -> {}", request.method(), request.path(), targetBaseUrl);
         try {
+            String uri = request.queryString() != null
+                    ? targetBaseUrl + request.path() + "?" + request.queryString()
+                    : targetBaseUrl + request.path();
+
             ResponseEntity<byte[]> response = restClient
                     .method(HttpMethod.valueOf(request.method()))
-                    .uri(targetBaseUrl + request.path())
+                    .uri(uri)
                     .headers(h -> request.headers().forEach(h::addAll))
                     .body(request.body() != null ? request.body() : new byte[0])
                     .retrieve()

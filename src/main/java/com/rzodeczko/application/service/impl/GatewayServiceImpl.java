@@ -1,7 +1,7 @@
 package com.rzodeczko.application.service.impl;
 
+import com.rzodeczko.application.port.in.GatewayPort;
 import com.rzodeczko.application.port.out.ForwardingPort;
-import com.rzodeczko.application.service.GatewayService;
 import com.rzodeczko.domain.exception.RouteNotFoundException;
 import com.rzodeczko.domain.model.GatewayRequest;
 import com.rzodeczko.domain.model.GatewayResponse;
@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GatewayServiceImpl implements GatewayService {
+public class GatewayServiceImpl implements GatewayPort {
 
     private final ForwardingPort forwardingPort;
     private final RoutingTable routingTable;
@@ -67,7 +67,8 @@ public class GatewayServiceImpl implements GatewayService {
                 request.path(),
                 request.method(),
                 forwardedHeaders,
-                request.body()
+                request.body(),
+                request.queryString()
         );
 
         return forwardingPort.forward(targetBaseUrl, forwardedRequest);
