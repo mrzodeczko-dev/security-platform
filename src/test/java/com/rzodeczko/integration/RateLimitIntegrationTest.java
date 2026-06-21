@@ -21,19 +21,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = {
-        "gateway.rate-limit.enabled=true",
-        "gateway.rate-limit.requests-per-second=1",
-        "gateway.rate-limit.burst-capacity=5",
-        "gateway.routes[0].prefix=/auth",
-        "gateway.routes[0].target=http://auth:8084",
-        "gateway.public-paths[0]=POST:/auth/login",
-        "gateway.cors.allowed-origins[0]=http://localhost:3000",
-        "gateway.forwarding.connect-timeout-ms=2000",
-        "gateway.forwarding.read-timeout-ms=10000",
-        "gateway.forwarding-max-body-size=10485760"
-})
 @AutoConfigureMockMvc
+@SpringBootTest
 class RateLimitIntegrationTest extends AbstractIntegrationTest {
 
     private static final int BURST_CAPACITY = 5;
