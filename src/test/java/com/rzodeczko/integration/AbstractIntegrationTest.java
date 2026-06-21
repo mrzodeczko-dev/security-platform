@@ -1,5 +1,6 @@
 package com.rzodeczko.integration;
 
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
@@ -10,6 +11,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
 
+@ActiveProfiles("integration-test")
 public abstract class AbstractIntegrationTest {
 
     static final String JWT_SECRET_BASE64;
