@@ -1,22 +1,27 @@
 package com.rzodeczko.infrastructure.configuration;
 
-import com.rzodeczko.application.port.out.ForwardingPort;
 import com.rzodeczko.application.port.in.GatewayPort;
+import com.rzodeczko.application.port.out.ForwardingPort;
 import com.rzodeczko.application.service.impl.GatewayServiceImpl;
 import com.rzodeczko.domain.model.RoutingTable;
 import com.rzodeczko.infrastructure.configuration.properties.GatewayProperties;
 import com.rzodeczko.infrastructure.configuration.properties.JwtProperties;
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
-import io.github.bucket4j.redis.jedis.Bucket4jJedis;
+import io.github.bucket4j.redis.lettuce.Bucket4jLettuce;
+import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 import tools.jackson.databind.ObjectMapper;
 
 import javax.crypto.SecretKey;
@@ -79,23 +84,23 @@ public class BeanConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "gateway.rate-limit", name = "enabled", havingValue = "true")
-    public JedisPool rateLimitJedisPool(GatewayProperties gatewayProperties) {
-        var redis = gatewayProperties.rateLimit().redis();
-        var poolConfig = new JedisPoolConfig();
-        poolConfig.setMaxTotal(16);
-        poolConfig.setMaxIdle(8);
+    public LettuceBasedProxyManager<String> rateLimitProxyManager(
+            @Value("${spring.data.redis.host}") String redisHost,
+            @Value("${spring.data.redis.port}") int redisPort,
+            @Value("${spring.data.redis.password:}") String redisPassword) {
 
-        var password = redis.password();
-        if (password == null || password.isBlank()) {
-            return new JedisPool(poolConfig, redis.host(), redis.port());
+        var uriBuilder = RedisURI.builder()
+                .withHost(redisHost)
+                .withPort(redisPort);
+
+        if (redisPassword != null && !redisPassword.isBlank()) {
+            uriBuilder.withPassword(redisPassword.toCharArray());
         }
-        return new JedisPool(poolConfig, redis.host(), redis.port(), 2000, password);
-    }
 
-    @Bean
-    @ConditionalOnProperty(prefix = "gateway.rate-limit", name = "enabled", havingValue = "true")
-    public ProxyManager<byte[]> rateLimitProxyManager(JedisPool rateLimitJedisPool) {
-        return Bucket4jJedis.casBasedBuilder(rateLimitJedisPool)
+        var client = RedisClient.create(uriBuilder.build());
+        var connection = client.connect(RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE));
+
+        return Bucket4jLettuce.casBasedBuilder(connection)
                 .expirationAfterWrite(
                         ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(
                                 Duration.ofMinutes(5)))

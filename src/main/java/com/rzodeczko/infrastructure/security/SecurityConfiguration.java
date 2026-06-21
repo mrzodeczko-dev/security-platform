@@ -26,8 +26,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Security configuration for JWT-based, stateless authentication.
@@ -41,13 +43,13 @@ public class SecurityConfiguration {
     private final TokenVerificationPort tokenVerificationPort;
     private final GatewayProperties gatewayProperties;
     private final ObjectMapper objectMapper;
-    private final ProxyManager<byte[]> rateLimitProxyManager;
+    private final ProxyManager<String> rateLimitProxyManager;
 
     public SecurityConfiguration(
             TokenVerificationPort tokenVerificationPort,
             GatewayProperties gatewayProperties,
             ObjectMapper objectMapper,
-            @Nullable ProxyManager<byte[]> rateLimitProxyManager) {
+            @Nullable ProxyManager<String> rateLimitProxyManager) {
         this.tokenVerificationPort = tokenVerificationPort;
         this.gatewayProperties = gatewayProperties;
         this.objectMapper = objectMapper;
@@ -92,8 +94,12 @@ public class SecurityConfiguration {
                             .build())
                     .build();
 
+            Set<String> trustedProxies = rl.trustedProxies() != null
+                    ? new HashSet<>(rl.trustedProxies())
+                    : Set.of();
+
             http.addFilterAfter(
-                    new RateLimitFilter(rateLimitProxyManager, () -> bucketConfig, objectMapper),
+                    new RateLimitFilter(rateLimitProxyManager, () -> bucketConfig, objectMapper, trustedProxies),
                     JwtAuthorizationFilter.class);
         }
 

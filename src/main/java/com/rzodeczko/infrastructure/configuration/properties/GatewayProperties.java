@@ -12,6 +12,7 @@ public record GatewayProperties(
         List<String> userPaths,
         CorsProperties cors,
         ForwardingProperties forwarding,
+        long forwardingMaxBodySize,
         RateLimitProperties rateLimit
 ) {
     public record RouteDefinition(String prefix, String target) {
@@ -27,9 +28,7 @@ public record GatewayProperties(
             boolean enabled,
             long requestsPerSecond,
             long burstCapacity,
-            RedisProperties redis
+            List<String> trustedProxies
     ) {
-        public record RedisProperties(String host, int port, String password) {
-        }
     }
 }

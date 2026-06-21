@@ -6,6 +6,11 @@ spring:
   threads:
     virtual:
       enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 
 jwt:
   secret: ${JWT_SECRET}
@@ -40,11 +45,9 @@ gateway:
   forwarding:
     connect-timeout-ms: 2000
     read-timeout-ms: 10000
+  forwarding-max-body-size: ${FORWARDING_MAX_BODY_SIZE:10485760}
   rate-limit:
     enabled: ${RATE_LIMIT_ENABLED:true}
     requests-per-second: ${RATE_LIMIT_RPS:20}
     burst-capacity: ${RATE_LIMIT_BURST:40}
-    redis:
-      host: ${RATE_LIMIT_REDIS_HOST:localhost}
-      port: ${RATE_LIMIT_REDIS_PORT:6379}
-      password: ${RATE_LIMIT_REDIS_PASSWORD:}
+    trusted-proxies: ${RATE_LIMIT_TRUSTED_PROXIES:}

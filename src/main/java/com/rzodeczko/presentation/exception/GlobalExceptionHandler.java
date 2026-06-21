@@ -2,7 +2,9 @@ package com.rzodeczko.presentation.exception;
 
 import com.rzodeczko.domain.exception.DownstreamUnavailableException;
 import com.rzodeczko.domain.exception.InvalidTokenException;
+import com.rzodeczko.domain.exception.PayloadTooLargeException;
 import com.rzodeczko.domain.exception.RouteNotFoundException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +31,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("error", "Unauthorized"));
+    }
+
+    @ExceptionHandler(PayloadTooLargeException.class)
+    public ResponseEntity<Map<String, String>> handlePayloadTooLarge(PayloadTooLargeException e) {
+        log.warn("Payload too large: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(CallNotPermittedException.class)
+    public ResponseEntity<Map<String, String>> handleCircuitBreakerOpen(CallNotPermittedException e) {
+        log.warn("Circuit breaker open: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", "Service temporarily unavailable"));
     }
 
     @ExceptionHandler(DownstreamUnavailableException.class)

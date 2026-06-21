@@ -1,11 +1,12 @@
 package com.rzodeczko.presentation.controller;
 
 import com.rzodeczko.application.port.in.GatewayPort;
+import com.rzodeczko.domain.exception.PayloadTooLargeException;
 import com.rzodeczko.domain.model.GatewayRequest;
 import com.rzodeczko.domain.model.GatewayResponse;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 
 /**
@@ -23,15 +25,23 @@ import java.util.*;
  */
 @RestController
 @RequestMapping("/**")
-@RequiredArgsConstructor
 @Slf4j
 public class GatewayController {
     private final GatewayPort gatewayService;
+    private final long forwardingMaxBodySize;
+
+    public GatewayController(
+            GatewayPort gatewayService,
+            @Value("${gateway.forwarding-max-body-size}") long forwardingMaxBodySize) {
+        this.gatewayService = gatewayService;
+        this.forwardingMaxBodySize = forwardingMaxBodySize;
+    }
+
 
     /**
      * Handle any HTTP request, map it to a domain request and return downstream response.
      *
-     * @param request incoming servlet request
+     * @param request        incoming servlet request
      * @param authentication authentication set by the JWT filter, may be null
      * @return response from downstream service as ResponseEntity<byte[]>
      * @throws IOException on I/O errors reading the request body
@@ -65,7 +75,7 @@ public class GatewayController {
 
         byte[] body = switch (request.getMethod()) {
             case "GET", "HEAD", "DELETE", "OPTIONS" -> new byte[0];
-            default -> request.getInputStream().readAllBytes();
+            default -> readBodyWithLimit(request.getInputStream(), forwardingMaxBodySize);
         };
 
         // Create domain GatewayRequest; subsequent layers work on domain types only
@@ -90,5 +100,15 @@ public class GatewayController {
                 .status(gatewayResponse.statusCode())
                 .headers(responseHeaders)
                 .body(gatewayResponse.body());
+    }
+
+    private byte[] readBodyWithLimit(InputStream inputStream, long maxBytes) throws IOException {
+        int limit = (int) Math.min(maxBytes, Integer.MAX_VALUE);
+        byte[] body = inputStream.readNBytes(limit);
+        // If we read exactly the limit, check if there is more data (overflow)
+        if (body.length == limit && inputStream.read() != -1) {
+            throw new PayloadTooLargeException(maxBytes);
+        }
+        return body;
     }
 }

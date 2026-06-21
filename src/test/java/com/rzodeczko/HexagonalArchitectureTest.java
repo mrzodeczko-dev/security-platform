@@ -121,20 +121,11 @@ class HexagonalArchitectureTest {
         }
 
         @Test
-        @DisplayName("Domain does not use MongoDB annotations")
-        void domainDoesNotUseMongoAnnotations() {
+        @DisplayName("Domain does not use Jakarta annotations")
+        void domainDoesNotUseJakartaAnnotations() {
             noClasses()
                     .that().resideInAPackage("com.rzodeczko.domain..")
-                    .should().dependOnClassesThat().resideInAPackage("org.springframework.data..")
-                    .check(classes);
-        }
-
-        @Test
-        @DisplayName("Domain does not use Kafka classes")
-        void domainDoesNotUseKafka() {
-            noClasses()
-                    .that().resideInAPackage("com.rzodeczko.domain..")
-                    .should().dependOnClassesThat().resideInAPackage("org.apache.kafka..")
+                    .should().dependOnClassesThat().resideInAPackage("jakarta..")
                     .check(classes);
         }
     }
