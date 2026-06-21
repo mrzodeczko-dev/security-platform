@@ -168,10 +168,18 @@ services:
         condition: service_healthy
       auth-service:
         condition: service_healthy
+      auth-redis:
+        condition: service_healthy
     environment:
       JWT_SECRET: ${API_GATEWAY_JWT_SECRET}
       AUTH_SERVICE_URL: ${API_GATEWAY_AUTH_SERVICE_URL}
       USER_SERVICE_URL: ${API_GATEWAY_USER_SERVICE_URL}
+      RATE_LIMIT_ENABLED: ${API_GATEWAY_RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_RPS: ${API_GATEWAY_RATE_LIMIT_RPS:-20}
+      RATE_LIMIT_BURST: ${API_GATEWAY_RATE_LIMIT_BURST:-40}
+      RATE_LIMIT_REDIS_HOST: ${API_GATEWAY_RATE_LIMIT_REDIS_HOST:-auth-redis}
+      RATE_LIMIT_REDIS_PORT: ${API_GATEWAY_RATE_LIMIT_REDIS_PORT:-6379}
+      RATE_LIMIT_REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
     deploy:
       resources:
         limits:

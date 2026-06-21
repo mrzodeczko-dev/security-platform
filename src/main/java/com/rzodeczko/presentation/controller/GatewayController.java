@@ -63,8 +63,10 @@ public class GatewayController {
             headers.put(name, values);
         }
 
-        // Servlet input stream is single-use - read it once into a byte array
-        byte[] body = request.getInputStream().readAllBytes();
+        byte[] body = switch (request.getMethod()) {
+            case "GET", "HEAD", "DELETE", "OPTIONS" -> new byte[0];
+            default -> request.getInputStream().readAllBytes();
+        };
 
         // Create domain GatewayRequest; subsequent layers work on domain types only
         var gatewayRequest = new GatewayRequest(

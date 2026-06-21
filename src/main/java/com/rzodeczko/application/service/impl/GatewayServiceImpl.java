@@ -11,8 +11,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 public class GatewayServiceImpl implements GatewayPort {
+
+    // Headers that should not leak from downstream to the client
+    private static final Set<String> STRIPPED_RESPONSE_HEADERS = Set.of(
+            "server", "x-powered-by", "transfer-encoding", "connection",
+            "keep-alive", "proxy-authenticate", "proxy-authorization",
+            "te", "trailer", "upgrade"
+    );
 
     private final ForwardingPort forwardingPort;
     private final RoutingTable routingTable;
@@ -49,6 +59,12 @@ public class GatewayServiceImpl implements GatewayPort {
             }
         });
 
+        // Reuse client-provided X-Request-Id or generate a new one for distributed tracing
+        String requestId = Optional.ofNullable(request.headers().get("X-Request-Id"))
+                .flatMap(values -> values.stream().findFirst())
+                .orElse(UUID.randomUUID().toString());
+        forwardedHeaders.put("X-Request-Id", List.of(requestId));
+
         // Add trusted X-User-* headers validated by the gateway (absent for public paths)
         if (userId != null) {
             forwardedHeaders.put("X-User-Id", List.of(userId));
@@ -71,6 +87,17 @@ public class GatewayServiceImpl implements GatewayPort {
                 request.queryString()
         );
 
-        return forwardingPort.forward(targetBaseUrl, forwardedRequest);
+        var response = forwardingPort.forward(targetBaseUrl, forwardedRequest);
+
+        // Strip hop-by-hop and stack-revealing headers, add X-Request-Id
+        Map<String, List<String>> responseHeaders = new HashMap<>();
+        response.headers().forEach((name, values) -> {
+            if (!STRIPPED_RESPONSE_HEADERS.contains(name.toLowerCase())) {
+                responseHeaders.put(name, values);
+            }
+        });
+        responseHeaders.put("X-Request-Id", List.of(requestId));
+
+        return new GatewayResponse(response.statusCode(), responseHeaders, response.body());
     }
 }

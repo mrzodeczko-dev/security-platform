@@ -3,13 +3,17 @@ package com.rzodeczko.infrastructure.security;
 import com.rzodeczko.application.port.out.TokenVerificationPort;
 import com.rzodeczko.infrastructure.configuration.properties.GatewayProperties;
 import com.rzodeczko.infrastructure.security.filter.JwtAuthorizationFilter;
-import lombok.RequiredArgsConstructor;
+import com.rzodeczko.infrastructure.security.filter.RateLimitFilter;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.BucketConfiguration;
+import io.github.bucket4j.distributed.proxy.ProxyManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.lang.Nullable;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -21,22 +25,34 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-@Configuration
-@EnableWebSecurity
-@RequiredArgsConstructor
 /**
  * Security configuration for JWT-based, stateless authentication.
  *
  * <p>@EnableWebSecurity is present for clarity; Spring Boot will enable web
  * security automatically when Spring Security is on the classpath.
  */
+@Configuration
+@EnableWebSecurity
 public class SecurityConfiguration {
     private final TokenVerificationPort tokenVerificationPort;
     private final GatewayProperties gatewayProperties;
     private final ObjectMapper objectMapper;
+    private final ProxyManager<byte[]> rateLimitProxyManager;
+
+    public SecurityConfiguration(
+            TokenVerificationPort tokenVerificationPort,
+            GatewayProperties gatewayProperties,
+            ObjectMapper objectMapper,
+            @Nullable ProxyManager<byte[]> rateLimitProxyManager) {
+        this.tokenVerificationPort = tokenVerificationPort;
+        this.gatewayProperties = gatewayProperties;
+        this.objectMapper = objectMapper;
+        this.rateLimitProxyManager = rateLimitProxyManager;
+    }
 
     /**
      * Configure the security filter chain.
@@ -49,7 +65,7 @@ public class SecurityConfiguration {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
+        http
                 // Disable CSRF - JWT in Authorization header makes CSRF protection unnecessary
                 .csrf(AbstractHttpConfigurer::disable)
 
@@ -64,11 +80,26 @@ public class SecurityConfiguration {
                 .addFilterBefore(
                         new JwtAuthorizationFilter(tokenVerificationPort, objectMapper),
                         UsernamePasswordAuthenticationFilter.class
-                )
+                );
 
-                // Apply path-based rules from properties: publicPaths, adminPaths, userPaths
-                // Patterns use format METHOD:/path and are matched with both method and path
-                .authorizeHttpRequests(auth -> {
+        // Rate limiting registered after JWT so SecurityContext is populated for userId-based keys
+        if (rateLimitProxyManager != null) {
+            var rl = gatewayProperties.rateLimit();
+            var bucketConfig = BucketConfiguration.builder()
+                    .addLimit(Bandwidth.builder()
+                            .capacity(rl.burstCapacity())
+                            .refillGreedy(rl.requestsPerSecond(), Duration.ofSeconds(1))
+                            .build())
+                    .build();
+
+            http.addFilterAfter(
+                    new RateLimitFilter(rateLimitProxyManager, () -> bucketConfig, objectMapper),
+                    JwtAuthorizationFilter.class);
+        }
+
+        // Apply path-based rules from properties: publicPaths, adminPaths, userPaths
+        // Patterns use format METHOD:/path and are matched with both method and path
+        http.authorizeHttpRequests(auth -> {
 
                     // PUBLIC
                     if (gatewayProperties.publicPaths() != null) {
@@ -130,8 +161,9 @@ public class SecurityConfiguration {
                                 Map.of("error", "Forbidden")
                         ));
                     });
-                })
-                .build();
+                });
+
+        return http.build();
     }
 
     /**
@@ -143,7 +175,7 @@ public class SecurityConfiguration {
     private CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();
         config.setAllowedOrigins(gatewayProperties.cors().allowedOrigins());
-        // Wymagane dla HttpOnly refresh-token cookie.
+        // required for HttpOnly refresh-token cookie.
         config.setAllowCredentials(true);
         config.setAllowedHeaders(List.of(
                 HttpHeaders.AUTHORIZATION,
@@ -158,6 +190,8 @@ public class SecurityConfiguration {
                 HttpMethod.PATCH.name(),
                 HttpMethod.OPTIONS.name()
         ));
+        // Cache preflight responses for 1 hour to avoid redundant OPTIONS requests
+        config.setMaxAge(3600L);
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

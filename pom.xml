@@ -29,6 +29,7 @@
     <properties>
         <java.version>25</java.version>
         <jjwt.version>0.12.5</jjwt.version>
+        <bucket4j.version>8.18.0</bucket4j.version>
     </properties>
     <dependencies>
         <dependency>
@@ -85,6 +86,15 @@
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
             <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-jedis</artifactId>
+            <version>${bucket4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

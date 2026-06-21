@@ -61,7 +61,6 @@ public class HttpForwardingAdapter implements ForwardingPort {
                     response.getBody()
             );
         } catch (RestClientResponseException e) {
-            // Downstream zwrocil blad - propagujemy go 1:1
             log.warn("Downstream {} returned {}", targetBaseUrl + request.path(), e.getStatusCode());
             Map<String, List<String>> responseHeaders = new HashMap<>();
             if (e.getResponseHeaders() != null) {
