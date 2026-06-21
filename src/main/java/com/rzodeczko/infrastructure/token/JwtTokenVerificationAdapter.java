@@ -1,6 +1,6 @@
 package com.rzodeczko.infrastructure.token;
 
-import com.rzodeczko.application.port.TokenVerificationPort;
+import com.rzodeczko.application.port.out.TokenVerificationPort;
 import com.rzodeczko.domain.exception.InvalidTokenException;
 import com.rzodeczko.domain.model.TokenInfo;
 import io.jsonwebtoken.JwtException;

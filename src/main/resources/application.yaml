@@ -1,8 +1,8 @@
 server:
-  port: ${SERVER_PORT}
+  port: 8085
 spring:
   application:
-    name: ${SPRING_APPLICATION_NAME}
+    name: api-gateway-service
   threads:
     virtual:
       enabled: true
@@ -21,14 +21,18 @@ gateway:
     - "POST:/auth/login"
     - "POST:/auth/refresh"
     - "POST:/auth/mfa"
-    - "POST:/auth/logut"
+    - "POST:/auth/logout"
     - "POST:/users"
     - "POST:/users/code"
     - "POST:/users/activation"
     - "POST:/users/password/permission"
     - "POST:/users/password/reset"
     - "GET:/"
-    - "GET:/actuator/helth"
+    - "GET:/actuator/health"
+  admin-paths:
+    - "PUT:/users/*/role"
+  user-paths:
+    - "POST:/users/*/mfa"
   cors:
     allowed-origins:
       - "http://localhost:3000"

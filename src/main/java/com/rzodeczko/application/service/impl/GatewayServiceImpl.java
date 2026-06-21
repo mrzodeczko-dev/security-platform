@@ -1,11 +1,11 @@
 package com.rzodeczko.application.service.impl;
 
-import com.rzodeczko.application.port.ForwardingPort;
+import com.rzodeczko.application.port.out.ForwardingPort;
 import com.rzodeczko.application.service.GatewayService;
 import com.rzodeczko.domain.exception.RouteNotFoundException;
 import com.rzodeczko.domain.model.GatewayRequest;
 import com.rzodeczko.domain.model.GatewayResponse;
-import com.rzodeczko.infrastructure.configuration.properties.GatewayProperties;
+import com.rzodeczko.domain.model.RoutingTable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,11 +15,11 @@ import java.util.Map;
 public class GatewayServiceImpl implements GatewayService {
 
     private final ForwardingPort forwardingPort;
-    private final GatewayProperties gatewayProperties;
+    private final RoutingTable routingTable;
 
-    public GatewayServiceImpl(ForwardingPort forwardingPort, GatewayProperties gatewayProperties) {
+    public GatewayServiceImpl(ForwardingPort forwardingPort, RoutingTable routingTable) {
         this.forwardingPort = forwardingPort;
-        this.gatewayProperties = gatewayProperties;
+        this.routingTable = routingTable;
     }
 
     /**
@@ -32,7 +32,7 @@ public class GatewayServiceImpl implements GatewayService {
             String username,
             String userRole) {
 
-        var targetBaseUrl = gatewayProperties
+        var targetBaseUrl = routingTable
                 .resolveTarget(request.path())
                 .orElseThrow(() -> new RouteNotFoundException(request.path()));
 

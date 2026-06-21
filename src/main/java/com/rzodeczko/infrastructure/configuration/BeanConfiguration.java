@@ -1,9 +1,10 @@
 package com.rzodeczko.infrastructure.configuration;
 
 
-import com.rzodeczko.application.port.ForwardingPort;
+import com.rzodeczko.application.port.out.ForwardingPort;
 import com.rzodeczko.application.service.GatewayService;
 import com.rzodeczko.application.service.impl.GatewayServiceImpl;
+import com.rzodeczko.domain.model.RoutingTable;
 import com.rzodeczko.infrastructure.configuration.properties.GatewayProperties;
 import com.rzodeczko.infrastructure.configuration.properties.JwtProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -47,10 +48,20 @@ public class BeanConfiguration {
     }
 
     @Bean
+    public RoutingTable routingTable(GatewayProperties gatewayProperties) {
+        var routes = gatewayProperties
+                .routes()
+                .stream()
+                .map(r -> new RoutingTable.Route(r.prefix(), r.target()))
+                .toList();
+        return new RoutingTable(routes);
+    }
+
+    @Bean
     public GatewayService gatewayService(
             ForwardingPort forwardingPort,
-            GatewayProperties gatewayProperties
+            RoutingTable routingTable
     ) {
-        return new GatewayServiceImpl(forwardingPort, gatewayProperties);
+        return new GatewayServiceImpl(forwardingPort, routingTable);
     }
 }

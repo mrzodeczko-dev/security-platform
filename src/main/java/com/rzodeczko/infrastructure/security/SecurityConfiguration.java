@@ -1,7 +1,7 @@
 package com.rzodeczko.infrastructure.security;
 
 
-import com.rzodeczko.application.port.TokenVerificationPort;
+import com.rzodeczko.application.port.out.TokenVerificationPort;
 import com.rzodeczko.infrastructure.configuration.properties.GatewayProperties;
 import com.rzodeczko.infrastructure.security.filter.JwtAuthorizationFilter;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,9 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 
-/** Stateless JWT security configuration. CSRF disabled, no HTTP sessions. */
+/**
+ * Stateless JWT security configuration. CSRF disabled, no HTTP sessions.
+ */
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -35,7 +37,7 @@ public class SecurityConfiguration {
     private final ObjectMapper objectMapper;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
 
@@ -51,7 +53,7 @@ public class SecurityConfiguration {
 
                 .authorizeHttpRequests(auth -> {
                     gatewayProperties.publicPaths().forEach(pattern -> {
-                        var parts =  pattern.split(":", 2);
+                        var parts = pattern.split(":", 2);
                         if (parts.length == 2) {
                             auth.requestMatchers(
                                     HttpMethod.valueOf(parts[0].toUpperCase()),
@@ -82,7 +84,9 @@ public class SecurityConfiguration {
                 .build();
     }
 
-    /** CORS source - allowed origins loaded from gateway properties. */
+    /**
+     * CORS source - allowed origins loaded from gateway properties.
+     */
     private CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();
         config.setAllowedOrigins(gatewayProperties.cors().allowedOrigins());

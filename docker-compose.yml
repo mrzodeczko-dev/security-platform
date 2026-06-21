@@ -87,7 +87,7 @@ services:
     image: mrzodeczko/users-service-security:1.0.0
     restart: on-failure:5
     ports:
-      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
+      - "${USER_SERVICE_PORT}:8083"
     depends_on:
       user-mysql:
         condition: service_healthy
@@ -96,7 +96,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://${USER_SERVICE_MYSQL_DB_HOST}:3306/${USER_SERVICE_MYSQL_DB_NAME}?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${USER_SERVICE_MYSQL_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${USER_SERVICE_MYSQL_DB_PASSWORD}
-      SERVER_PORT: ${USER_SERVICE_PORT}
+      SERVER_PORT: 8083
       MAIL_HOST: ${USER_SERVICE_MAIL_HOST}
       MAIL_USERNAME: ${USER_SERVICE_MAIL_USERNAME}
       MAIL_PASSWORD: ${USER_SERVICE_MAIL_PASSWORD}
@@ -123,7 +123,7 @@ services:
     image: mrzodeczko/auth-service-security:1.0.0
     restart: on-failure:5
     ports:
-      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+      - "${AUTH_SERVICE_PORT}:8084"
     depends_on:
       user-service:
         condition: service_healthy
@@ -131,7 +131,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: ${AUTH_SERVICE_APPLICATION_NAME}
-      SERVER_PORT: ${AUTH_SERVICE_PORT}
+      SERVER_PORT: 8084
       JWT_SECRET: ${AUTH_JWT_SECRET}
       JWT_ACCESS_TOKEN_EXPIRATION_MS: ${AUTH_JWT_ACCESS_TOKEN_EXPIRATION_MS}
       JWT_REFRESH_TOKEN_EXPIRATION_MS: ${AUTH_JWT_REFRESH_TOKEN_EXPIRATION_MS}
@@ -162,15 +162,13 @@ services:
       dockerfile: Dockerfile
     restart: on-failure:5
     ports:
-      - "${API_GATEWAY_SERVICE_PORT}:${API_GATEWAY_SERVICE_PORT}"
+      - "${API_GATEWAY_SERVICE_PORT}:8085"
     depends_on:
       user-service:
         condition: service_healthy
       auth-service:
         condition: service_healthy
     environment:
-      SPRING_APPLICATION_NAME: ${API_GATEWAY_SERVICE_APPLICATION_NAME}
-      SERVER_PORT: ${API_GATEWAY_SERVICE_PORT}
       JWT_SECRET: ${API_GATEWAY_JWT_SECRET}
       AUTH_SERVICE_URL: ${API_GATEWAY_AUTH_SERVICE_URL}
       USER_SERVICE_URL: ${API_GATEWAY_USER_SERVICE_URL}

@@ -1,6 +1,6 @@
 package com.rzodeczko.infrastructure.forwarding;
 
-import com.rzodeczko.application.port.ForwardingPort;
+import com.rzodeczko.application.port.out.ForwardingPort;
 import com.rzodeczko.domain.exception.DownstreamUnavailableException;
 import com.rzodeczko.domain.model.GatewayRequest;
 import com.rzodeczko.domain.model.GatewayResponse;
@@ -16,7 +16,9 @@ import java.util.List;
 import java.util.Map;
 
 
-/** Transparently forwards requests to downstream services via {@link RestClient}. Propagates responses as raw bytes. */
+/**
+ * Transparently forwards requests to downstream services via {@link RestClient}. Propagates responses as raw bytes.
+ */
 @Component
 @Slf4j
 public class HttpForwardingAdapter implements ForwardingPort {
@@ -60,6 +62,7 @@ public class HttpForwardingAdapter implements ForwardingPort {
                     e.getResponseBodyAsByteArray()
             );
         } catch (Exception e) {
+            log.error("!!! HttpForwardingAdapter forward error: msg=[{}], {}{}->{}", e.getMessage(), request.method(), request.path(), targetBaseUrl, e);
             throw new DownstreamUnavailableException(targetBaseUrl, e.getMessage());
         }
     }

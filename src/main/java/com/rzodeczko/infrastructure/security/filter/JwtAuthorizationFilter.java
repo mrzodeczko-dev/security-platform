@@ -1,7 +1,7 @@
 package com.rzodeczko.infrastructure.security.filter;
 
 
-import com.rzodeczko.application.port.TokenVerificationPort;
+import com.rzodeczko.application.port.out.TokenVerificationPort;
 import com.rzodeczko.domain.exception.InvalidTokenException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

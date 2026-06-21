@@ -20,25 +20,4 @@ public record GatewayProperties(
 
     public record ForwardingProperties(Long connectTimeoutMs, Long readTimeoutMs) {
     }
-
-    /** Resolves the target base URL for the first route matching the request path prefix. */
-    public Optional<String> resolveTarget(String requestPath) {
-        return routes
-                .stream()
-                .filter(r -> requestPath.startsWith(r.prefix))
-                .findFirst()
-                .map(RouteDefinition::target);
-    }
-
-    /** Checks if the given method+path matches any public path pattern (format: "METHOD:/path"). */
-    public boolean isPublicPath(String method, String path) {
-        return publicPaths
-                .stream()
-                .anyMatch(pattern -> {
-                    var parts = pattern.split(":", 2);
-                    return parts.length == 2
-                            && parts[0].equalsIgnoreCase(method)
-                            && parts[1].equals(path);
-                });
-    }
 }
