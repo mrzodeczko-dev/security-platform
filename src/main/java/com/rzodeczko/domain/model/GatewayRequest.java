@@ -3,7 +3,15 @@ package com.rzodeczko.domain.model;
 import java.util.List;
 import java.util.Map;
 
-/** Domain representation of an HTTP request. */
+/**
+ * Domain representation of an incoming HTTP request.
+ *
+ * <p>Created by the presentation layer from HttpServletRequest so the
+ * application layer is independent of servlet or Spring MVC APIs.
+ *
+ * <p>headers: Map<String, List<String>> — a header may have multiple values.
+ * body: byte[] — raw bytes; the gateway does not parse request body content.
+ */
 public record GatewayRequest(
         String path,
         String method,

@@ -15,9 +15,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 /**
- * Transparently forwards requests to downstream services via {@link RestClient}. Propagates responses as raw bytes.
+ * HTTP adapter that forwards domain requests to downstream services.
+ *
+ * <p>Flow: GatewayRequest (domain) -> RestClient -> ResponseEntity -> GatewayResponse (domain).
+ * The gateway forwards downstream status, headers and body to the client unchanged.
+ * Raw byte arrays are used for payloads; no JSON parsing is performed here.
+ *
+ * <p>Errors: RestClientResponseException (4xx/5xx) are propagated 1:1. Network errors are
+ * translated to DownstreamUnavailableException which maps to 502.
  */
 @Component
 @Slf4j
@@ -41,6 +47,7 @@ public class HttpForwardingAdapter implements ForwardingPort {
                     .retrieve()
                     .toEntity(byte[].class);
 
+            // ResponseEntity -> GatewayResponse
             Map<String, List<String>> responseHeaders = new HashMap<>();
             response.getHeaders().forEach(responseHeaders::put);
 
@@ -50,6 +57,7 @@ public class HttpForwardingAdapter implements ForwardingPort {
                     response.getBody()
             );
         } catch (RestClientResponseException e) {
+            // Downstream zwrocil blad - propagujemy go 1:1
             log.warn("Downstream {} returned {}", targetBaseUrl + request.path(), e.getStatusCode());
             Map<String, List<String>> responseHeaders = new HashMap<>();
             if (e.getResponseHeaders() != null) {
@@ -62,7 +70,6 @@ public class HttpForwardingAdapter implements ForwardingPort {
                     e.getResponseBodyAsByteArray()
             );
         } catch (Exception e) {
-            log.error("!!! HttpForwardingAdapter forward error: msg=[{}], {}{}->{}", e.getMessage(), request.method(), request.path(), targetBaseUrl, e);
             throw new DownstreamUnavailableException(targetBaseUrl, e.getMessage());
         }
     }

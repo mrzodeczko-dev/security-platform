@@ -1,6 +1,5 @@
 package com.rzodeczko.infrastructure.security.filter;
 
-
 import com.rzodeczko.application.port.out.TokenVerificationPort;
 import com.rzodeczko.domain.exception.InvalidTokenException;
 import jakarta.servlet.FilterChain;
@@ -23,13 +22,18 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Extracts and verifies JWT from the Authorization header, populating the {@link SecurityContextHolder}.
- * Registered manually in the security filter chain (not a {@code @Component}) to stay under Spring Security's control.
+ * Filter that verifies JWT access tokens and populates SecurityContext with a principal and authorities.
+ *
+ * <p>Implemented as OncePerRequestFilter to guarantee single execution per request in complex dispatch scenarios
+ * (forward, include, error). The filter is intentionally not a Spring component to avoid automatic global
+ * registration; it is registered explicitly in the SecurityFilterChain so its position relative to other security
+ * filters is controlled.
  */
 @RequiredArgsConstructor
 @Slf4j
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
+    // Authorization header must start with "Bearer " followed by the token
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final TokenVerificationPort tokenVerificationPort;
@@ -52,7 +56,8 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             var token = header.substring(BEARER_PREFIX.length());
             var tokenInfo = tokenVerificationPort.verify(token);
 
-            // 3-arg constructor -> authenticated=true
+            // Build an authenticated Authentication using the 3-arg constructor so Spring treats it as authenticated
+            // principal = userId as String; credentials = null since verification already occurred; authorities = role
             var auth = new UsernamePasswordAuthenticationToken(
                     tokenInfo.userId().toString(),
                     null,
@@ -62,17 +67,19 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             );
 
 
-            // Carry user identity for downstream X-User-* header injection
+            // Use details to carry additional user data needed by the controller and downstream services
+            // Downstream services rely on these headers rather than re-verifying the JWT
             auth.setDetails(Map.of(
                     "userId", tokenInfo.userId().toString(),
                     "username", tokenInfo.username() != null ? tokenInfo.username() : "",
                     "role", tokenInfo.role() != null ? tokenInfo.role() : ""
             ));
 
+            // Set Authentication in SecurityContext so downstream security checks see an authenticated principal
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (InvalidTokenException e) {
             log.warn("JWT validation failed for {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
-            // Prevent stale context leaking to subsequent requests on the same thread
+            // Clear SecurityContext to avoid leaking authentication across thread reuse and return 401 JSON
             SecurityContextHolder.clearContext();
             writeError(response, HttpStatus.UNAUTHORIZED, e.getMessage());
             return;
@@ -81,7 +88,13 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /** Writes a JSON error response directly - filters run before {@code @RestControllerAdvice}. */
+    /**
+     * Write an error response directly from the filter.
+     *
+     * <p>GlobalExceptionHandler annotated with @RestControllerAdvice only handles exceptions thrown from controllers.
+     * Exceptions thrown inside a filter do not reach that handler. Filters must thus write the HttpServletResponse
+     * directly to control the returned status and body.
+     */
     private void writeError(HttpServletResponse res, HttpStatus status, String msg) throws IOException {
         res.setStatus(status.value());
         res.setContentType(MediaType.APPLICATION_JSON_VALUE);

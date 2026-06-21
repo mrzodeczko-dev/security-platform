@@ -23,7 +23,8 @@ public class GatewayServiceImpl implements GatewayService {
     }
 
     /**
-     * {@inheritDoc}
+     * Accepts a domain request, resolves the target, filters headers, enriches with trusted user data
+     * and forwards the request to the downstream service.
      */
     @Override
     public GatewayResponse handle(
@@ -32,11 +33,13 @@ public class GatewayServiceImpl implements GatewayService {
             String username,
             String userRole) {
 
+        // Resolve route by first matching prefix from the routing table
         var targetBaseUrl = routingTable
                 .resolveTarget(request.path())
                 .orElseThrow(() -> new RouteNotFoundException(request.path()));
 
-        // Whitelist-only header forwarding - prevents client-injected X-User-* spoofing
+        // Build forwarded headers from a white-list to prevent client spoofing
+        // Avoid forwarding Authorization, Host, Transfer-Encoding, etc.
         Map<String, List<String>> forwardedHeaders = new HashMap<>();
 
         var safeHeaders = List.of("content-type", "accept", "cache-control", "cookie");
@@ -46,7 +49,7 @@ public class GatewayServiceImpl implements GatewayService {
             }
         });
 
-        // Gateway-trusted identity headers (null on public/unauthenticated paths)
+        // Add trusted X-User-* headers validated by the gateway (absent for public paths)
         if (userId != null) {
             forwardedHeaders.put("X-User-Id", List.of(userId));
         }
@@ -59,6 +62,7 @@ public class GatewayServiceImpl implements GatewayService {
             forwardedHeaders.put("X-User-Role", List.of(userRole));
         }
 
+        // Create a forwarded GatewayRequest with filtered and enriched headers and delegate to forwarding port
         var forwardedRequest = new GatewayRequest(
                 request.path(),
                 request.method(),

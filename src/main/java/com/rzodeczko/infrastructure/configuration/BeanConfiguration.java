@@ -1,6 +1,5 @@
 package com.rzodeczko.infrastructure.configuration;
 
-
 import com.rzodeczko.application.port.out.ForwardingPort;
 import com.rzodeczko.application.service.GatewayService;
 import com.rzodeczko.application.service.impl.GatewayServiceImpl;

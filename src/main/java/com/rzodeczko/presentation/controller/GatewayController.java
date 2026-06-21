@@ -19,6 +19,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * REST controller that accepts all incoming HTTP requests, converts them to the
+ * domain {@link com.rzodeczko.domain.model.GatewayRequest} and delegates routing
+ * and forwarding to the application service.
+ */
 @RestController
 @RequestMapping("/**")
 @RequiredArgsConstructor
@@ -26,12 +31,20 @@ import java.util.Map;
 public class GatewayController {
     private final GatewayService gatewayService;
 
-    /** Catches all requests, translates to domain model, delegates to gateway service and returns the downstream response. */
+    /**
+     * Handle any HTTP request, map it to a domain request and return downstream response.
+     *
+     * @param request incoming servlet request
+     * @param authentication authentication set by the JWT filter, may be null
+     * @return response from downstream service as ResponseEntity<byte[]>
+     * @throws IOException on I/O errors reading the request body
+     */
     @RequestMapping
     public ResponseEntity<byte[]> handle(
             HttpServletRequest request,
             Authentication authentication
     ) throws IOException {
+        // Extract user data populated by JwtAuthorizationFilter
         String userId = null;
         String username = null;
         String userRole = null;
@@ -44,6 +57,7 @@ public class GatewayController {
             }
         }
 
+        // Build headers map from HttpServletRequest
         Map<String, List<String>> headers = new HashMap<>();
         var headersNames = request.getHeaderNames();
         while (headersNames.hasMoreElements()) {
@@ -53,8 +67,10 @@ public class GatewayController {
                     .add(request.getHeader(name));
         }
 
+        // Servlet input stream is single-use - read it once into a byte array
         byte[] body = request.getInputStream().readAllBytes();
 
+        // Create domain GatewayRequest; subsequent layers work on domain types only
         var gatewayRequest = new GatewayRequest(
                 request.getRequestURI(),
                 request.getMethod(),
@@ -64,6 +80,7 @@ public class GatewayController {
 
         log.debug("Gateway: {} {} userId={}", request.getMethod(), request.getRequestURI(), userId);
 
+        // Delegate to service for routing, header filtering and forwarding
         GatewayResponse gatewayResponse = gatewayService.handle(
                 gatewayRequest, userId, username, userRole);
 

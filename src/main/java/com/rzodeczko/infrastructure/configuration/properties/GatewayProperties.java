@@ -3,12 +3,13 @@ package com.rzodeczko.infrastructure.configuration.properties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
-import java.util.Optional;
 
 @ConfigurationProperties(prefix = "gateway")
 public record GatewayProperties(
         List<RouteDefinition> routes,
         List<String> publicPaths,
+        List<String> adminPaths,
+        List<String> userPaths,
         CorsProperties cors,
         ForwardingProperties forwarding
 ) {
@@ -20,4 +21,5 @@ public record GatewayProperties(
 
     public record ForwardingProperties(Long connectTimeoutMs, Long readTimeoutMs) {
     }
+
 }
