@@ -136,9 +136,9 @@ class GatewayControllerTest {
         @DisplayName("returns 404 for RouteNotFoundException")
         void returns404ForRouteNotFound() throws Exception {
             when(gatewayService.handle(any(), isNull(), isNull(), isNull()))
-                    .thenThrow(new com.rzodeczko.domain.exception.RouteNotFoundException("/unknown"));
+                    .thenThrow(new com.rzodeczko.domain.exception.RouteNotFoundException("/auth/unknown"));
 
-            mockMvc.perform(get("/unknown"))
+            mockMvc.perform(get("/auth/unknown"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error").exists());
         }

@@ -169,54 +169,13 @@ curl -X PUT http://localhost:8085/users/123/role \
 
 ### Environment Configuration
 
-Create a `.env` file in the project root (see [Environment Variables](#environment-variables) for all options):
+Copy the example and fill in secrets:
 
-```dotenv
-# --- MySQL (User Service) ---
-USER_SERVICE_MYSQL_DB_ROOT_PASSWORD=root
-USER_SERVICE_MYSQL_DB_NAME=user_service_db
-USER_SERVICE_MYSQL_DB_USER=user
-USER_SERVICE_MYSQL_DB_PASSWORD=user1234
-USER_SERVICE_MYSQL_DB_PORT=3306
-USER_SERVICE_MYSQL_DB_HOST=user-mysql
-USER_SERVICE_MYSQL_INNODB_BUFFER_POOL_SIZE=128M
-USER_SERVICE_MYSQL_MAX_CONNECTIONS=50
-
-# --- Redis (Auth + Rate Limiting) ---
-AUTH_REDIS_PASSWORD=redis1234
-AUTH_REDIS_HOST=auth-redis
-AUTH_REDIS_PORT=6379
-
-# --- User Service ---
-USER_SERVICE_PORT=8083
-USER_SERVICE_APPLICATION_NAME=user-service
-USER_SERVICE_MAIL_HOST=smtp.example.com
-USER_SERVICE_MAIL_USERNAME=mail@example.com
-USER_SERVICE_MAIL_PASSWORD=mail1234
-USER_SERVICE_MAIL_PORT=587
-USER_SERVICE_INTERNAL_SECRET=internal-secret
-USER_SERVICE_MFA_ISSUER=SecurityApp
-
-# --- Auth Service ---
-AUTH_SERVICE_PORT=8084
-AUTH_SERVICE_APPLICATION_NAME=auth-service
-AUTH_JWT_SECRET=<base64-encoded-64-byte-key>
-AUTH_JWT_ACCESS_TOKEN_EXPIRATION_MS=900000
-AUTH_JWT_REFRESH_TOKEN_EXPIRATION_MS=604800000
-AUTH_USER_SERVICE_URL=http://user-service:8083
-AUTH_SERVICE_INTERNAL_SECRET=internal-secret
-
-# --- API Gateway ---
-API_GATEWAY_SERVICE_PORT=8085
-API_GATEWAY_JWT_SECRET=<base64-encoded-64-byte-key>
-API_GATEWAY_AUTH_SERVICE_URL=http://auth-service:8084
-API_GATEWAY_USER_SERVICE_URL=http://user-service:8083
-API_GATEWAY_RATE_LIMIT_ENABLED=true
-API_GATEWAY_RATE_LIMIT_RPS=20
-API_GATEWAY_RATE_LIMIT_BURST=40
-API_GATEWAY_RATE_LIMIT_REDIS_HOST=auth-redis
-API_GATEWAY_RATE_LIMIT_REDIS_PORT=6379
+```bash
+cp .env.example .env
 ```
+
+See `.env.example` for all required variables with descriptions.
 
 ### Start the Stack
 

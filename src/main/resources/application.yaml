@@ -51,3 +51,15 @@ gateway:
     requests-per-second: ${RATE_LIMIT_RPS:20}
     burst-capacity: ${RATE_LIMIT_BURST:40}
     trusted-proxies: ${RATE_LIMIT_TRUSTED_PROXIES:}
+
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:false}
+  swagger-ui:
+    enabled: ${SPRINGDOC_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

@@ -7,6 +7,7 @@ import com.rzodeczko.infrastructure.security.filter.RateLimitFilter;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -44,16 +45,19 @@ public class SecurityConfiguration {
     private final GatewayProperties gatewayProperties;
     private final ObjectMapper objectMapper;
     private final ProxyManager<String> rateLimitProxyManager;
+    private final boolean springdocEnabled;
 
     public SecurityConfiguration(
             TokenVerificationPort tokenVerificationPort,
             GatewayProperties gatewayProperties,
             ObjectMapper objectMapper,
-            @Nullable ProxyManager<String> rateLimitProxyManager) {
+            @Nullable ProxyManager<String> rateLimitProxyManager,
+            @Value("${springdoc.api-docs.enabled:false}") boolean springdocEnabled) {
         this.tokenVerificationPort = tokenVerificationPort;
         this.gatewayProperties = gatewayProperties;
         this.objectMapper = objectMapper;
         this.rateLimitProxyManager = rateLimitProxyManager;
+        this.springdocEnabled = springdocEnabled;
     }
 
     /**
@@ -120,6 +124,13 @@ public class SecurityConfiguration {
                         });
                     }
 
+                    // OPENAPI - only when springdoc is enabled via SPRINGDOC_ENABLED env
+                    if (springdocEnabled) {
+                        auth.requestMatchers(HttpMethod.GET, "/swagger-ui/**").permitAll();
+                        auth.requestMatchers(HttpMethod.GET, "/swagger-ui.html").permitAll();
+                        auth.requestMatchers(HttpMethod.GET, "/v3/api-docs/**").permitAll();
+                    }
+
                     // ADMIN
                     if (gatewayProperties.adminPaths() != null) {
                         gatewayProperties.adminPaths().forEach(pattern -> {
@@ -151,7 +162,7 @@ public class SecurityConfiguration {
 
                 .exceptionHandling(e -> {
                     // No token - return 401 JSON
-                    e.authenticationEntryPoint((req, res, ex) -> {
+                    e.authenticationEntryPoint((_, res, _) -> {
                         res.setStatus(HttpStatus.UNAUTHORIZED.value());
                         res.setContentType(MediaType.APPLICATION_JSON_VALUE);
                         res.getWriter().write(objectMapper.writeValueAsString(
@@ -160,7 +171,7 @@ public class SecurityConfiguration {
                     });
 
                     // Authenticated but lacking permission - return 403 JSON
-                    e.accessDeniedHandler((req, res, ex) -> {
+                    e.accessDeniedHandler((_, res, _) -> {
                         res.setStatus(HttpStatus.FORBIDDEN.value());
                         res.setContentType(MediaType.APPLICATION_JSON_VALUE);
                         res.getWriter().write(objectMapper.writeValueAsString(

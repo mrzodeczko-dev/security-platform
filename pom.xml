@@ -32,6 +32,7 @@
         <bucket4j.version>8.18.0</bucket4j.version>
         <resilience4j.version>2.3.0</resilience4j.version>
         <version.jacoco>0.8.14</version.jacoco>
+        <springdoc.version>3.0.3</springdoc.version>
     </properties>
     <dependencies>
         <dependency>
@@ -45,6 +46,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

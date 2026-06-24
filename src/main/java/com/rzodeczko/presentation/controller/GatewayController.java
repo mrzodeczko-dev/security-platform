@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,8 +24,9 @@ import java.util.*;
  * domain {@link com.rzodeczko.domain.model.GatewayRequest} and delegates routing
  * and forwarding to the application service.
  */
+@Hidden
 @RestController
-@RequestMapping("/**")
+@RequestMapping({"/auth/**", "/users/**"})
 @Slf4j
 public class GatewayController {
     private final GatewayPort gatewayService;
@@ -105,7 +107,6 @@ public class GatewayController {
     private byte[] readBodyWithLimit(InputStream inputStream, long maxBytes) throws IOException {
         int limit = (int) Math.min(maxBytes, Integer.MAX_VALUE);
         byte[] body = inputStream.readNBytes(limit);
-        // If we read exactly the limit, check if there is more data (overflow)
         if (body.length == limit && inputStream.read() != -1) {
             throw new PayloadTooLargeException(maxBytes);
         }

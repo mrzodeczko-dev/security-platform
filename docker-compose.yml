@@ -92,11 +92,9 @@ services:
       user-mysql:
         condition: service_healthy
     environment:
-      SPRING_APPLICATION_NAME: ${USER_SERVICE_APPLICATION_NAME}
       SPRING_DATASOURCE_URL: jdbc:mysql://${USER_SERVICE_MYSQL_DB_HOST}:3306/${USER_SERVICE_MYSQL_DB_NAME}?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${USER_SERVICE_MYSQL_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${USER_SERVICE_MYSQL_DB_PASSWORD}
-      SERVER_PORT: 8083
       MAIL_HOST: ${USER_SERVICE_MAIL_HOST}
       MAIL_USERNAME: ${USER_SERVICE_MAIL_USERNAME}
       MAIL_PASSWORD: ${USER_SERVICE_MAIL_PASSWORD}
@@ -108,6 +106,12 @@ services:
         limits:
           memory: 768M
           cpus: "1.0"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -130,8 +134,6 @@ services:
       auth-redis:
         condition: service_healthy
     environment:
-      SPRING_APPLICATION_NAME: ${AUTH_SERVICE_APPLICATION_NAME}
-      SERVER_PORT: 8084
       JWT_SECRET: ${AUTH_JWT_SECRET}
       JWT_ACCESS_TOKEN_EXPIRATION_MS: ${AUTH_JWT_ACCESS_TOKEN_EXPIRATION_MS}
       JWT_REFRESH_TOKEN_EXPIRATION_MS: ${AUTH_JWT_REFRESH_TOKEN_EXPIRATION_MS}
@@ -145,6 +147,12 @@ services:
         limits:
           memory: 512M
           cpus: "1.0"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -177,9 +185,10 @@ services:
       RATE_LIMIT_ENABLED: ${API_GATEWAY_RATE_LIMIT_ENABLED:-true}
       RATE_LIMIT_RPS: ${API_GATEWAY_RATE_LIMIT_RPS:-20}
       RATE_LIMIT_BURST: ${API_GATEWAY_RATE_LIMIT_BURST:-40}
-      RATE_LIMIT_REDIS_HOST: ${API_GATEWAY_RATE_LIMIT_REDIS_HOST:-auth-redis}
-      RATE_LIMIT_REDIS_PORT: ${API_GATEWAY_RATE_LIMIT_REDIS_PORT:-6379}
-      RATE_LIMIT_REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
+      REDIS_HOST: ${API_GATEWAY_RATE_LIMIT_REDIS_HOST:-auth-redis}
+      REDIS_PORT: ${API_GATEWAY_RATE_LIMIT_REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
+      SPRINGDOC_ENABLED: ${SPRINGDOC_ENABLED}
     deploy:
       resources:
         limits:
