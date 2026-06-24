@@ -33,7 +33,7 @@
         <testcontainers.version>1.21.3</testcontainers.version>
         <wiremock.version>3.10.0</wiremock.version>
         <jacoco.version>0.8.14</jacoco.version>
-
+        <openapi.version>3.0.1</openapi.version>
     </properties>
 
     <dependencyManagement>
@@ -111,6 +111,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${openapi.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis-test</artifactId>
             <scope>test</scope>
@@ -148,11 +153,7 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
+
         <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>

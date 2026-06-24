@@ -157,27 +157,13 @@ curl -X POST http://localhost:8084/auth/logout \
 
 ### Environment Configuration
 
-Create a `.env` file in the project root:
+Copy the example and fill in secrets:
 
-```dotenv
-# ─── Application ─────────────────────────────────────────────────────────────
-AUTH_SERVICE_PORT=8084
-AUTH_SERVICE_APPLICATION_NAME=auth-service
-
-# ─── JWT ─────────────────────────────────────────────────────────────────────
-AUTH_JWT_SECRET=changeme_jwt_secret_min_32_chars
-AUTH_JWT_ACCESS_TOKEN_EXPIRATION_MS=900000
-AUTH_JWT_REFRESH_TOKEN_EXPIRATION_MS=604800000
-
-# ─── User Service ────────────────────────────────────────────────────────────
-AUTH_USER_SERVICE_URL=http://user-service:8081
-AUTH_SERVICE_INTERNAL_SECRET=changeme_internal_secret
-
-# ─── Redis ───────────────────────────────────────────────────────────────────
-AUTH_REDIS_HOST=auth-redis
-AUTH_REDIS_PORT=6379
-AUTH_REDIS_PASSWORD=changeme_redis_password
+```bash
+cp .env.example .env
 ```
+
+See `.env.example` for all required variables with descriptions.
 
 ### Start the Service
 
@@ -193,35 +179,18 @@ Verify: `curl http://localhost:8084/actuator/health` → `{"status":"UP"}`
 ## ⚙️ Environment Variables
 [Back to Table of Contents](#toc)
 
-### Application
-
-| Variable | Required | Description | Example |
+| Variable | Required | Description | Default |
 |----------|----------|-------------|---------|
-| `SERVER_PORT` | yes | HTTP port the service listens on | `8084` |
-| `SPRING_APPLICATION_NAME` | optional | Spring application name | `auth-service` |
-
-### JWT
-
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `JWT_SECRET` | yes | HMAC secret for signing and verifying JWTs (min. 32 chars) | `super_secret_key_min_32_chars` |
-| `JWT_ACCESS_TOKEN_EXPIRATION_MS` | yes | Access token lifetime in milliseconds | `900000` (15 min) |
-| `JWT_REFRESH_TOKEN_EXPIRATION_MS` | yes | Refresh token lifetime in milliseconds | `604800000` (7 days) |
-
-### User Service
-
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `USER_SERVICE_URL` | yes | Base URL of the User Service | `http://user-service:8081` |
-| `INTERNAL_SECRET` | yes | Shared secret sent as `X-Internal-Secret` header to User Service | `super_secret_value` |
-
-### Redis
-
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `REDIS_HOST` | yes | Redis hostname | `auth-redis` |
-| `REDIS_PORT` | yes | Redis port | `6379` |
-| `REDIS_PASSWORD` | yes | Redis password | `changeme_redis_password` |
+| `AUTH_SERVICE_PORT` | yes | Host port mapped to the service | `8084` |
+| `AUTH_REDIS_HOST` | yes | Redis host | `auth-redis` |
+| `AUTH_REDIS_PORT` | yes | Redis port | `6379` |
+| `AUTH_REDIS_PASSWORD` | yes | Redis password | - |
+| `AUTH_JWT_SECRET` | yes | Base64-encoded HMAC-SHA512 key (min 64 bytes). Generate: `openssl rand -base64 64 \| tr -d '\n'`. Must match `API_GATEWAY_JWT_SECRET` | - |
+| `AUTH_JWT_ACCESS_TOKEN_EXPIRATION_MS` | yes | Access token TTL in ms | `300000` (5 min) |
+| `AUTH_JWT_REFRESH_TOKEN_EXPIRATION_MS` | yes | Refresh token TTL in ms | `3000000` (~50 min) |
+| `AUTH_USER_SERVICE_URL` | yes | User Service base URL | `http://user-service:8083` |
+| `AUTH_SERVICE_INTERNAL_SECRET` | yes | Shared secret for User Service internal API. Must match `USER_SERVICE_INTERNAL_SECRET` | - |
+| `SPRINGDOC_API_DOCS_SWAGGER_ENABLED` | no | Enable Swagger UI | `false` |
 
 ---
 

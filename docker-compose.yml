@@ -16,7 +16,6 @@ services:
       --maxmemory-policy allkeys-lru
     volumes:
       - auth-redis-data:/data
-
     expose:
       - "6379"
     deploy:
@@ -47,13 +46,11 @@ services:
       dockerfile: Dockerfile
     restart: on-failure:5
     ports:
-      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+      - "${AUTH_SERVICE_PORT}:8084"
     depends_on:
       auth-redis:
         condition: service_healthy
     environment:
-      SPRING_APPLICATION_NAME: ${AUTH_SERVICE_APPLICATION_NAME}
-      SERVER_PORT: ${AUTH_SERVICE_PORT}
       JWT_SECRET: ${AUTH_JWT_SECRET}
       JWT_ACCESS_TOKEN_EXPIRATION_MS: ${AUTH_JWT_ACCESS_TOKEN_EXPIRATION_MS}
       JWT_REFRESH_TOKEN_EXPIRATION_MS: ${AUTH_JWT_REFRESH_TOKEN_EXPIRATION_MS}
@@ -62,6 +59,7 @@ services:
       REDIS_HOST: ${AUTH_REDIS_HOST}
       REDIS_PORT: ${AUTH_REDIS_PORT}
       REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
+      SPRINGDOC_API_DOCS_SWAGGER_ENABLED: ${SPRINGDOC_API_DOCS_SWAGGER_ENABLED}
     deploy:
       resources:
         limits:
@@ -74,7 +72,6 @@ services:
         max-file: "3"
     networks:
       - mr-network
-
 
 volumes:
   auth-redis-data:

@@ -1,9 +1,9 @@
 server:
-  port: ${SERVER_PORT}
+  port: 8084
 
 spring:
   application:
-    name: ${SPRING_APPLICATION_NAME}
+    name: auth-service
   threads:
     virtual:
       enabled: true
@@ -34,3 +34,16 @@ mfa:
   cache:
     ttl-seconds: 60
     key-prefix: "mfa:secret:"
+
+springdoc:
+  swagger-ui:
+    enabled: ${SPRINGDOC_API_DOCS_SWAGGER_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

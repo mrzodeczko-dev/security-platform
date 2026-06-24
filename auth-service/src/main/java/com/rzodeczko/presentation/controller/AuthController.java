@@ -1,6 +1,5 @@
 package com.rzodeczko.presentation.controller;
 
-
 import com.rzodeczko.application.command.LoginCommand;
 import com.rzodeczko.application.command.RefreshTokenCommand;
 import com.rzodeczko.application.command.VerifyMfaCommand;
