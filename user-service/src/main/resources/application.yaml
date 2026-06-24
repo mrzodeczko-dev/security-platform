@@ -1,8 +1,8 @@
 server:
-  port: ${SERVER_PORT}
+  port: 8083
 spring:
   application:
-    name: ${SPRING_APPLICATION_NAME}
+    name: user-service
   threads:
     virtual:
       enabled: true
@@ -56,3 +56,12 @@ internal:
 springdoc:
   swagger-ui:
     enabled: ${SPRINGDOC_API_DOCS_SWAGGER_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
