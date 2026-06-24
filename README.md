@@ -120,25 +120,24 @@ sequenceDiagram
 
 | Method | Path | Purpose | Success |
 |--------|------|---------|---------| 
-| `GET` | `/health` | Application health check | `200 OK` |
-| `GET` | `/actuator/health` | Actuator health (full) | `200 OK` |
-| `GET` | `/actuator/health/liveness` | Liveness probe (Docker) | `200 OK` |
+| `GET` | `/` | Application health check | `200 OK` |
+| `GET` | `/actuator/health` | Actuator health | `200 OK` |
 
 ### cURL Example
 
 ```bash
 # Register a user
-curl -X POST http://localhost:8081/users \
+curl -X POST http://localhost:8083/users \
   -H "Content-Type: application/json" \
   -d '{"username": "john", "email": "john@example.com", "password": "Secret123!", "passwordConfirmation": "Secret123!", "role": "USER"}'
 
 # Activate account
-curl -X POST http://localhost:8081/users/activation \
+curl -X POST http://localhost:8083/users/activation \
   -H "Content-Type: application/json" \
   -d '{"code": "482910"}'
 
 # Verify credentials (internal)
-curl -X POST http://localhost:8081/internal/users/credentials \
+curl -X POST http://localhost:8083/internal/users/credentials \
   -H "Content-Type: application/json" \
   -H "X-Internal-Secret: <your-secret>" \
   -d '{"username": "john", "password": "Secret123!"}'
@@ -158,34 +157,13 @@ curl -X POST http://localhost:8081/internal/users/credentials \
 
 ### Environment Configuration
 
-Create a `.env` file in the project root:
+Copy the example and fill in secrets:
 
-```dotenv
-# ─── MySQL ───────────────────────────────────────────────────────────────────
-USER_SERVICE_MYSQL_DB_ROOT_PASSWORD=changeme_root
-USER_SERVICE_MYSQL_DB_NAME=user_db
-USER_SERVICE_MYSQL_DB_USER=user_user
-USER_SERVICE_MYSQL_DB_PASSWORD=changeme_user
-USER_SERVICE_MYSQL_DB_PORT=3306
-USER_SERVICE_MYSQL_DB_HOST=user-mysql
-
-# ─── Application ─────────────────────────────────────────────────────────────
-SERVER_PORT=8081
-SPRING_APPLICATION_NAME=user-service
-SPRING_DATASOURCE_URL=jdbc:mysql://user-mysql:3306/user_db
-SPRING_DATASOURCE_USERNAME=user_user
-SPRING_DATASOURCE_PASSWORD=changeme_user
-
-# ─── Mail ────────────────────────────────────────────────────────────────────
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=your@email.com
-MAIL_PASSWORD=your_app_password
-
-# ─── Security ────────────────────────────────────────────────────────────────
-INTERNAL_SECRET=changeme_internal_secret
-MFA_ISSUER=MyApp
+```bash
+cp .env.example .env
 ```
+
+See `.env.example` for all required variables with descriptions.
 
 ### Start the Service
 
@@ -193,7 +171,7 @@ MFA_ISSUER=MyApp
 docker-compose up -d --build
 ```
 
-Verify: `curl http://localhost:8081/actuator/health` → `{"status":"UP"}`
+Verify: `curl http://localhost:8083/actuator/health` → `{"status":"UP"}`
 
 ---
 
@@ -201,31 +179,39 @@ Verify: `curl http://localhost:8081/actuator/health` → `{"status":"UP"}`
 ## ⚙️ Environment Variables
 [Back to Table of Contents](#toc)
 
+### MySQL
+
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------|
+| `USER_SERVICE_MYSQL_DB_HOST` | yes | MySQL host | `user-mysql` |
+| `USER_SERVICE_MYSQL_DB_PORT` | yes | MySQL host port | `3309` |
+| `USER_SERVICE_MYSQL_DB_NAME` | yes | Database name | `users_db` |
+| `USER_SERVICE_MYSQL_DB_USER` | yes | DB user | `user` |
+| `USER_SERVICE_MYSQL_DB_PASSWORD` | yes | DB user password | - |
+| `USER_SERVICE_MYSQL_DB_ROOT_PASSWORD` | yes | MySQL root password | - |
+
 ### Application
 
-| Variable | Required | Description | Example |
+| Variable | Required | Description | Default |
 |----------|----------|-------------|---------|
-| `SERVER_PORT` | yes | HTTP port the service listens on | `8081` |
-| `SPRING_APPLICATION_NAME` | optional | Spring application name | `user-service` |
-| `SPRING_DATASOURCE_URL` | yes | JDBC connection URL | `jdbc:mysql://user-mysql:3306/user_db` |
-| `SPRING_DATASOURCE_USERNAME` | yes | DB username | `user_user` |
-| `SPRING_DATASOURCE_PASSWORD` | yes | DB password | `changeme_user` |
+| `USER_SERVICE_PORT` | yes | Host port mapped to the service | `8083` |
+| `USER_SERVICE_APPLICATION_NAME` | yes | Spring application name | `user-service` |
 
 ### Mail
 
-| Variable | Required | Description | Example |
+| Variable | Required | Description | Default |
 |----------|----------|-------------|---------|
-| `MAIL_HOST` | yes | SMTP server hostname | `smtp.gmail.com` |
-| `MAIL_PORT` | yes | SMTP port | `587` |
-| `MAIL_USERNAME` | yes | SMTP login | `your@email.com` |
-| `MAIL_PASSWORD` | yes | SMTP password / app password | `abcd efgh ijkl mnop` |
+| `USER_SERVICE_MAIL_HOST` | yes | SMTP server hostname | `smtp.gmail.com` |
+| `USER_SERVICE_MAIL_PORT` | yes | SMTP port | `587` |
+| `USER_SERVICE_MAIL_USERNAME` | yes | SMTP login | - |
+| `USER_SERVICE_MAIL_PASSWORD` | yes | SMTP password / app password | - |
 
 ### Security
 
-| Variable | Required | Description | Example |
+| Variable | Required | Description | Default |
 |----------|----------|-------------|---------|
-| `INTERNAL_SECRET` | yes | Shared secret for `/internal/*` routes (`X-Internal-Secret` header) | `super_secret_value` |
-| `MFA_ISSUER` | yes | Issuer name shown in authenticator apps | `MyApp` |
+| `USER_SERVICE_INTERNAL_SECRET` | yes | Shared secret for `/internal/*` routes (`X-Internal-Secret` header). Must match `AUTH_SERVICE_INTERNAL_SECRET` | - |
+| `SPRINGDOC_API_DOCS_SWAGGER_ENABLED` | no | Enable Swagger UI | `false` |
 
 ---
 
