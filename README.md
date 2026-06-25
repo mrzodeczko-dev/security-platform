@@ -11,7 +11,7 @@
 ## Overview
 [Back to Table of Contents](#toc)
 
-Security API Gateway is a custom-built reverse proxy that sits in front of the microservice ecosystem (Auth Service, User Service) and handles JWT authentication, role-based access control, per-client rate limiting, and request forwarding. Built on Hexagonal Architecture with a clean separation between domain, application, and infrastructure layers. The gateway verifies JWT tokens, enriches downstream requests with trusted `X-User-*` headers, strips unsafe response headers, and protects backend services with a distributed Circuit Breaker and Redis-backed rate limiter (Bucket4j).
+Security API Gateway is a custom-built reverse proxy that sits in front of the microservice ecosystem ([Auth Service](https://github.com/mrzodeczko-dev/security-auth-service), [User Service](https://github.com/mrzodeczko-dev/security-users-service)) and handles JWT authentication, role-based access control, per-client rate limiting, and request forwarding. Built on Hexagonal Architecture with a clean separation between domain, application, and infrastructure layers. The gateway verifies JWT tokens, enriches downstream requests with trusted `X-User-*` headers, strips unsafe response headers, and protects backend services with a distributed Circuit Breaker and Redis-backed rate limiter (Bucket4j).
 
 <a id="toc"></a>
 ## Table of Contents
