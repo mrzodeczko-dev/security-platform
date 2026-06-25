@@ -7,6 +7,7 @@ import com.rzodeczko.presentation.dto.request.GetMfaDataRequestDto;
 import com.rzodeczko.presentation.dto.request.VerifyCredentialsRequestDto;
 import com.rzodeczko.presentation.dto.response.MfaDataResponseDto;
 import com.rzodeczko.presentation.dto.response.UserCredentialsResponseDto;
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Hidden
 @RestController
 @RequestMapping("/internal/users")
 @Slf4j
