@@ -248,6 +248,32 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
             var updatedUser = jpaUserRepository.findByUsername("regularUser").orElseThrow();
             assertThat(updatedUser.getRole()).isEqualTo(Role.ADMIN);
         }
+
+        @Test
+        @DisplayName("should reject when header role mismatches DB role (token desync)")
+        void shouldRejectWhenRoleMismatch() throws Exception {
+            // register and promote to ADMIN in DB
+            var adminCmd = new RegisterUserCommand(
+                    "mismatchAdmin", "mismatch@test.com", "AdminP@ss1", "AdminP@ss1");
+            userService.register(adminCmd);
+
+            Thread.sleep(500);
+
+            var adminEntity = jpaUserRepository.findByUsername("mismatchAdmin").orElseThrow();
+            var adminVc = jpaVerificationCodeRepository.findByUserId(adminEntity.getId()).orElseThrow();
+            userService.activate(adminVc.getCode());
+
+            adminEntity = jpaUserRepository.findByUsername("mismatchAdmin").orElseThrow();
+            adminEntity.setRole(Role.ADMIN);
+            jpaUserRepository.save(adminEntity);
+
+            // header says ROLE_USER but DB says ADMIN → mismatch
+            var changeCmd = new com.rzodeczko.application.command.ChangeUserRoleCommand(
+                    adminEntity.getId(), Role.USER, adminEntity.getId(), "ROLE_USER");
+
+            assertThatThrownBy(() -> userService.changeUserRole(changeCmd))
+                    .isInstanceOf(com.rzodeczko.domain.exception.RoleMismatchException.class);
+        }
     }
 
     // ========================================
