@@ -40,8 +40,8 @@ User Service is a production-ready backend handling the full user lifecycle — 
 ### Password Reset
 
 4. Client calls `POST /users/code` — a new verification code is generated and emailed (same async path as activation)
-5. Client calls `POST /users/password/permission` with the code — service validates expiry and returns the user's email as a reset token
-6. Client calls `POST /users/password/reset` with email + new password — service re-encodes the password and persists it
+5. Client calls `POST /users/password/permission` with the code — service validates expiry, generates a one-time reset token (UUID), stores it as a new `VerificationCode`, deletes the original code, and returns the token
+6. Client calls `POST /users/password/reset` with `resetToken` + new password — service looks up the token, validates it, re-encodes the password, deletes the consumed token, and persists the update
 
 ### Internal Auth Integration
 
@@ -74,10 +74,10 @@ sequenceDiagram
     US->>DB: persist new VerificationCode
     US->>SMTP: send reset code email
     C->>US: POST /users/password/permission { code }
-    US->>DB: validate code, delete code
-    US-->>C: 200 OK { email }
-    C->>US: POST /users/password/reset { email, password }
-    US->>DB: update password (Argon2)
+    US->>DB: validate code, generate one-time token, delete code
+    US-->>C: 200 OK { resetToken }
+    C->>US: POST /users/password/reset { resetToken, password, passwordConfirmation }
+    US->>DB: validate token, update password (Argon2), delete token
     US-->>C: 201 Created { username }
 
     Note over AS,US: Internal auth (X-Internal-Secret required)
@@ -129,7 +129,7 @@ sequenceDiagram
 # Register a user
 curl -X POST http://localhost:8083/users \
   -H "Content-Type: application/json" \
-  -d '{"username": "john", "email": "john@example.com", "password": "Secret123!", "passwordConfirmation": "Secret123!", "role": "USER"}'
+  -d '{"username": "john", "email": "john@example.com", "password": "Secret123!", "passwordConfirmation": "Secret123!"}'
 
 # Activate account
 curl -X POST http://localhost:8083/users/activation \
@@ -318,6 +318,8 @@ graph LR
 - **Google Authenticator MFA:** `GoogleAuthMfaSetupAdapter` uses `googleauth` to generate TOTP secrets and QR URLs, stored per-user.
 - **Internal Route Security:** `InternalRequestFilter` intercepts all `/internal/*` requests and validates `X-Internal-Secret` using constant-time comparison (`MessageDigest.isEqual`), returning `403` on mismatch.
 - **Virtual Threads + container-aware JVM:** `spring.threads.virtual.enabled=true` with `-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC`.
+- **Double Role Validation (Defense in Depth):** `changeUserRole()` first checks the requesting user's role from the database (source of truth), then compares it against the JWT-derived `X-User-Role` header. If they differ, a `RoleMismatchException` (403) signals possible token desynchronization.
+- **One-Time Password Reset Token:** `getPasswordResetPermission()` validates the emailed code, generates a UUID token stored as a `VerificationCode`, and returns it. `resetPassword()` consumes and deletes the token — it cannot be reused.
 - **Domain-Driven Design (DDD):** Rich `User` aggregate with lifecycle methods (`activate()`, `updatePassword()`, `enableMfa()`, `changeRole()`), decoupled from infrastructure via repository ports.
 
 ---
@@ -348,7 +350,35 @@ graph LR
 ## 🧪 Testing Strategy
 [Back to Table of Contents](#toc)
 
-The project includes a smoke-test (`UserServiceApplicationTests`) that verifies the Spring context loads successfully. Unit and integration tests for domain models, service logic, and controllers are a natural next step following the same pattern as the order-service (JUnit 5 + AssertJ, `@WebMvcTest` for controllers, `@DataJpaTest` for repositories).
+The project has comprehensive unit and integration tests covering all layers of the hexagonal architecture (JUnit 5 + AssertJ + Mockito + Testcontainers).
+
+### Test Classes
+
+#### Unit Tests
+
+| Class | Scope |
+|-------|-------|
+| `UserTest` | Domain model: `activate()`, `updatePassword()`, `enableMfa()`, `changeRole()` lifecycle, `isAdmin()` |
+| `VerificationCodeTest` | Domain model: `isExpired()` logic |
+| `UserServiceImplTest` | Application service: registration, activation, password reset (with one-time token), MFA setup, credential verification, role change (with double validation + `RoleMismatchException`) |
+| `TransactionalUserServiceTest` | Transactional decorator delegates to `UserServiceImpl` |
+| `JavaEmailAdapterTest` | Email adapter: sends `SimpleMailMessage` via `JavaMailSender` |
+| `SpringEventPublisherAdapterTest` | Event publisher adapter: publishes `UserRegisteredEvent` |
+| `UserRegistrationEventListenerTest` | Async listener: generates code, sends email on `UserRegisteredEvent` |
+| `GoogleAuthMfaSetupAdapterTest` | MFA adapter: generates TOTP secret + QR URL |
+| `PasswordEncoderAdapterTest` | Password encoder: Argon2 encode + matches |
+| `InternalRequestFilterTest` | Security filter: constant-time `X-Internal-Secret` validation |
+| `UserRepositoryAdapterTest` | Persistence adapter: user CRUD via JPA |
+| `VerificationCodeRepositoryAdapterTest` | Persistence adapter: verification code CRUD via JPA |
+| `UserMapperTest` | Entity ↔ domain model mapping |
+| `VerificationCodeMapperTest` | Entity ↔ domain model mapping |
+| `GlobalExceptionHandlerTest` | Exception handler: all domain exceptions → correct HTTP status (including `RoleMismatchException` → 403) |
+
+#### Integration Tests
+
+| Class | Scope |
+|-------|-------|
+| `UserFlowIntegrationTest` | Full flow with Testcontainers MySQL: register → activate → verifyCredentials, password reset with one-time token, MFA setup, role change (admin promotion + mismatch rejection), duplicate guards, inactive account guard |
 
 ```bash
 mvn test        # runs all tests
@@ -383,6 +413,7 @@ mvn verify      # full build including integration tests
 │   │   │   │   │                         #   InvalidCredentialsException,
 │   │   │   │   │                         #   MfaAlreadyActivatedException,
 │   │   │   │   │                         #   PasswordMismatchException,
+│   │   │   │   │                         #   RoleMismatchException,
 │   │   │   │   │                         #   UserAlreadyActivatedException,
 │   │   │   │   │                         #   UserNotActivatedException,
 │   │   │   │   │                         #   UserNotFoundException,
@@ -431,7 +462,35 @@ mvn verify      # full build including integration tests
 │   │                                     #   mail, MFA issuer, activation settings)
 │   └── test/
 │       └── java/com/rzodeczko/
-│           └── UserServiceApplicationTests.java   # Spring context smoke test
+│           ├── AbstractIntegrationTest.java                         # Testcontainers MySQL base
+│           ├── UserFlowIntegrationTest.java                         # Full flow integration tests
+│           ├── application/service/impl/
+│           │   └── UserServiceImplTest.java                         # Service unit tests
+│           ├── domain/model/
+│           │   ├── UserTest.java                                    # User domain model tests
+│           │   └── VerificationCodeTest.java                        # VerificationCode tests
+│           ├── infrastructure/
+│           │   ├── email/
+│           │   │   └── JavaEmailAdapterTest.java                    # Email adapter tests
+│           │   ├── event/
+│           │   │   ├── SpringEventPublisherAdapterTest.java         # Event publisher tests
+│           │   │   └── UserRegistrationEventListenerTest.java       # Async listener tests
+│           │   ├── mfa/
+│           │   │   └── GoogleAuthMfaSetupAdapterTest.java           # MFA adapter tests
+│           │   ├── persistence/
+│           │   │   ├── adapter/
+│           │   │   │   ├── UserRepositoryAdapterTest.java           # User repo adapter tests
+│           │   │   │   └── VerificationCodeRepositoryAdapterTest.java
+│           │   │   └── mapper/
+│           │   │       ├── UserMapperTest.java                      # Mapper tests
+│           │   │       └── VerificationCodeMapperTest.java
+│           │   ├── security/
+│           │   │   ├── InternalRequestFilterTest.java               # Security filter tests
+│           │   │   └── PasswordEncoderAdapterTest.java              # Argon2 encoder tests
+│           │   └── service/tx/
+│           │       └── TransactionalUserServiceTest.java            # Tx decorator tests
+│           └── presentation/exception/
+│               └── GlobalExceptionHandlerTest.java                  # Exception handler tests
 ├── Dockerfile                            # Multi-stage build (maven → jre-alpine, non-root user)
 └── pom.xml                               # Maven build descriptor
 ```
