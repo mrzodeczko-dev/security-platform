@@ -210,6 +210,20 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().error()).isEqualTo("Insufficient role. Required: ROLE_ADMIN");
     }
 
+    // --- handleRoleMismatch ---
+
+    @Test
+    @DisplayName("handleRoleMismatch - RoleMismatchException returns 403 with mismatch details")
+    void handleRoleMismatch_returns403() {
+        var ex = new RoleMismatchException("ROLE_USER", "ROLE_ADMIN");
+
+        ResponseEntity<ApiResponseDto<Void>> response = handler.handleRoleMismatch(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().error()).contains("ROLE_USER").contains("ROLE_ADMIN");
+    }
+
     // --- handleNoResource ---
 
     @Test

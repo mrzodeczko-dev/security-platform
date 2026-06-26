@@ -31,8 +31,8 @@ public interface UserService {
     String setupMfa(UUID userId);
 
     // changeUserRole — role change by administrator.
-    // Requires ROLE_ADMIN in X-User-Role header (verification in service layer).
-    // Returns username of changed user as operation confirmation.
+    // Double validation: DB role (source of truth) + comparison with X-User-Role header (JWT).
+    // Detects token desynchronization (e.g. role revoked after token issued).
     String changeUserRole(ChangeUserRoleCommand command);
 
     // ----------------------------------------------------------------------------------------------------

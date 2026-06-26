@@ -187,21 +187,24 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String changeUserRole(ChangeUserRoleCommand command) {
-        // Permission verification of requesting user
-        if (!"ROLE_ADMIN".equals(command.requestingUserRole())) {
-            throw new InsufficientRoleException("ROLE_ADMIN");
-        }
-
+        // 1. Early validation: userId is required
         if (command.requestingUserId() == null) {
             throw new InsufficientRoleException("ROLE_ADMIN");
         }
 
+        // 2. Database check (source of truth)
         var requestingUser = userRepository
                 .findById(command.requestingUserId())
                 .orElseThrow(() -> new InsufficientRoleException("ROLE_ADMIN"));
 
         if (!requestingUser.isAdmin()) {
             throw new InsufficientRoleException("ROLE_ADMIN");
+        }
+
+        // 3. Double validation: compare role from header (JWT) with role from DB.
+        //    Detects token desynchronization - e.g. role was revoked after token was issued.
+        if (!requestingUser.getRole().getName().equals(command.requestingUserRole())) {
+            throw new RoleMismatchException(command.requestingUserRole(), requestingUser.getRole().getName());
         }
 
         var user = userRepository

@@ -602,18 +602,21 @@ class UserServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw when requesting user role is not ADMIN")
-        void shouldThrow_whenNotAdminRole() {
-            var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, UUID.randomUUID(), "ROLE_USER");
+        @DisplayName("should throw when requesting user ID is null")
+        void shouldThrow_whenRequestingUserIdNull() {
+            var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, null, "ROLE_ADMIN");
 
             assertThatThrownBy(() -> userService.changeUserRole(command))
                     .isInstanceOf(InsufficientRoleException.class);
         }
 
         @Test
-        @DisplayName("should throw when requesting user ID is null")
-        void shouldThrow_whenRequestingUserIdNull() {
-            var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, null, "ROLE_ADMIN");
+        @DisplayName("should throw when requesting user not found in database")
+        void shouldThrow_whenRequestingUserNotFoundInDb() {
+            UUID adminId = UUID.randomUUID();
+            var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, adminId, "ROLE_ADMIN");
+
+            when(userRepository.findById(adminId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> userService.changeUserRole(command))
                     .isInstanceOf(InsufficientRoleException.class);
@@ -633,15 +636,19 @@ class UserServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw when requesting user not found in database")
-        void shouldThrow_whenRequestingUserNotFoundInDb() {
+        @DisplayName("should throw RoleMismatchException when header role differs from DB role")
+        void shouldThrow_whenHeaderRoleDiffersFromDbRole() {
             UUID adminId = UUID.randomUUID();
-            var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, adminId, "ROLE_ADMIN");
+            var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, adminId, "ROLE_USER");
+            var admin = new User(adminId, "admin", "admin@x.com", ENCODED_PASSWORD, Role.ADMIN, true, null, null);
 
-            when(userRepository.findById(adminId)).thenReturn(Optional.empty());
+            when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
 
             assertThatThrownBy(() -> userService.changeUserRole(command))
-                    .isInstanceOf(InsufficientRoleException.class);
+                    .isInstanceOf(RoleMismatchException.class)
+                    .hasMessageContaining("ROLE_USER")
+                    .hasMessageContaining("ROLE_ADMIN");
+            verify(userRepository, never()).save(any());
         }
 
         @Test
@@ -677,16 +684,6 @@ class UserServiceImplTest {
             var captor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(captor.capture());
             assertThat(captor.getValue().getRole()).isEqualTo(Role.ADMIN);
-        }
-
-        @Test
-        @DisplayName("should not save when role header is not ADMIN")
-        void shouldNotSave_whenRoleHeaderNotAdmin() {
-            var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, UUID.randomUUID(), "ROLE_USER");
-
-            assertThatThrownBy(() -> userService.changeUserRole(command))
-                    .isInstanceOf(InsufficientRoleException.class);
-            verify(userRepository, never()).save(any());
         }
     }
 
