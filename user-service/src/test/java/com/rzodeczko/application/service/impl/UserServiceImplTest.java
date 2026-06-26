@@ -80,7 +80,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should register user when data is valid")
         void shouldRegisterUser_whenDataValid() {
-            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.USER);
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD);
             var savedUser = createDisabledUser();
 
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
@@ -98,7 +98,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should throw when username already exists")
         void shouldThrow_whenUsernameExists() {
-            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.USER);
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD);
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(createEnabledUser()));
 
             assertThatThrownBy(() -> userService.register(command))
@@ -109,7 +109,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should throw when email already exists")
         void shouldThrow_whenEmailExists() {
-            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.USER);
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD);
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(createEnabledUser()));
 
@@ -121,7 +121,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should throw when passwords do not match")
         void shouldThrow_whenPasswordsMismatch() {
-            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, "otherPassword", Role.USER);
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, "otherPassword");
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
@@ -133,7 +133,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should encode password before saving")
         void shouldEncodePassword_beforeSaving() {
-            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.USER);
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD);
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
             when(passwordEncoder.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
@@ -147,10 +147,10 @@ class UserServiceImplTest {
         }
 
         @Test
-        @DisplayName("should create user with correct role from command")
-        void shouldCreateUser_withCorrectRole() {
-            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.ADMIN);
-            var savedUser = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.ADMIN, false, null, null);
+        @DisplayName("should always create user with USER role")
+        void shouldCreateUser_withUserRole() {
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD);
+            var savedUser = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.USER, false, null, null);
 
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
@@ -161,13 +161,13 @@ class UserServiceImplTest {
 
             var captor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(captor.capture());
-            assertThat(captor.getValue().getRole()).isEqualTo(Role.ADMIN);
+            assertThat(captor.getValue().getRole()).isEqualTo(Role.USER);
         }
 
         @Test
         @DisplayName("should create user as disabled")
         void shouldCreateUser_asDisabled() {
-            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.USER);
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD);
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
             when(passwordEncoder.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
@@ -183,7 +183,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should publish event with saved user ID")
         void shouldPublishEvent_withSavedUserId() {
-            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD, Role.USER);
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD);
             var savedUser = createDisabledUser();
 
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
@@ -201,7 +201,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should not publish event when validation fails")
         void shouldNotPublishEvent_whenValidationFails() {
-            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, "other", Role.USER);
+            var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, "other");
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
@@ -452,13 +452,27 @@ class UserServiceImplTest {
     @DisplayName("resetPassword()")
     class ResetPasswordTests {
 
-        @Test
-        @DisplayName("should reset password when data is valid")
-        void shouldResetPassword_whenValid() {
-            var command = new ResetPasswordCommand(EMAIL, "newPass", "newPass");
-            var user = createEnabledUser();
+        private static final String RESET_TOKEN = "reset-token-uuid";
 
-            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+        private VerificationCode createValidResetToken() {
+            return new VerificationCode(UUID.randomUUID(), RESET_TOKEN,
+                    Instant.now().toEpochMilli() + 300_000, USER_ID);
+        }
+
+        private VerificationCode createExpiredResetToken() {
+            return new VerificationCode(UUID.randomUUID(), RESET_TOKEN,
+                    Instant.now().toEpochMilli() - 1000, USER_ID);
+        }
+
+        @Test
+        @DisplayName("should reset password when token and data are valid")
+        void shouldResetPassword_whenValid() {
+            var command = new ResetPasswordCommand(RESET_TOKEN, "newPass", "newPass");
+            var user = createEnabledUser();
+            var vc = createValidResetToken();
+
+            when(verificationCodeRepository.findByCode(RESET_TOKEN)).thenReturn(Optional.of(vc));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(passwordEncoder.encode("newPass")).thenReturn("$encoded$newPass");
             when(userRepository.save(any(User.class))).thenReturn(user);
 
@@ -466,12 +480,39 @@ class UserServiceImplTest {
 
             assertThat(result).isEqualTo(USERNAME);
             verify(passwordEncoder).encode("newPass");
+            verify(verificationCodeRepository).delete(vc);
+        }
+
+        @Test
+        @DisplayName("should throw when reset token not found")
+        void shouldThrow_whenTokenNotFound() {
+            var command = new ResetPasswordCommand("invalid-token", "newPass", "newPass");
+            when(verificationCodeRepository.findByCode("invalid-token")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.resetPassword(command))
+                    .isInstanceOf(VerificationCodeNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should throw when reset token is expired")
+        void shouldThrow_whenTokenExpired() {
+            var command = new ResetPasswordCommand(RESET_TOKEN, "newPass", "newPass");
+            var vc = createExpiredResetToken();
+
+            when(verificationCodeRepository.findByCode(RESET_TOKEN)).thenReturn(Optional.of(vc));
+
+            assertThatThrownBy(() -> userService.resetPassword(command))
+                    .isInstanceOf(VerificationCodeExpiredException.class);
+            verify(verificationCodeRepository).delete(vc);
         }
 
         @Test
         @DisplayName("should throw when passwords do not match")
         void shouldThrow_whenPasswordsMismatch() {
-            var command = new ResetPasswordCommand(EMAIL, "pass1", "pass2");
+            var command = new ResetPasswordCommand(RESET_TOKEN, "pass1", "pass2");
+            var vc = createValidResetToken();
+
+            when(verificationCodeRepository.findByCode(RESET_TOKEN)).thenReturn(Optional.of(vc));
 
             assertThatThrownBy(() -> userService.resetPassword(command))
                     .isInstanceOf(PasswordMismatchException.class);
@@ -480,18 +521,25 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should throw when account is not activated")
         void shouldThrow_whenAccountNotActivated() {
-            var command = new ResetPasswordCommand(EMAIL, "newPass", "newPass");
-            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(createDisabledUser()));
+            var command = new ResetPasswordCommand(RESET_TOKEN, "newPass", "newPass");
+            var vc = createValidResetToken();
+
+            when(verificationCodeRepository.findByCode(RESET_TOKEN)).thenReturn(Optional.of(vc));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(createDisabledUser()));
 
             assertThatThrownBy(() -> userService.resetPassword(command))
                     .isInstanceOf(UserNotActivatedException.class);
+            verify(verificationCodeRepository).delete(vc);
         }
 
         @Test
-        @DisplayName("should throw when user not found by email")
+        @DisplayName("should throw when user not found by token userId")
         void shouldThrow_whenUserNotFound() {
-            var command = new ResetPasswordCommand("unknown@x.com", "newPass", "newPass");
-            when(userRepository.findByEmail("unknown@x.com")).thenReturn(Optional.empty());
+            var command = new ResetPasswordCommand(RESET_TOKEN, "newPass", "newPass");
+            var vc = createValidResetToken();
+
+            when(verificationCodeRepository.findByCode(RESET_TOKEN)).thenReturn(Optional.of(vc));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> userService.resetPassword(command))
                     .isInstanceOf(UserNotFoundException.class);
@@ -500,10 +548,12 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should update password with encoded value")
         void shouldUpdatePassword_withEncodedValue() {
-            var command = new ResetPasswordCommand(EMAIL, "newPass", "newPass");
+            var command = new ResetPasswordCommand(RESET_TOKEN, "newPass", "newPass");
             var user = createEnabledUser();
+            var vc = createValidResetToken();
 
-            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+            when(verificationCodeRepository.findByCode(RESET_TOKEN)).thenReturn(Optional.of(vc));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(passwordEncoder.encode("newPass")).thenReturn("$encoded$newPass");
             when(userRepository.save(any(User.class))).thenReturn(user);
 
@@ -515,7 +565,10 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should not encode password when passwords mismatch")
         void shouldNotEncodePassword_whenPasswordsMismatch() {
-            var command = new ResetPasswordCommand(EMAIL, "pass1", "pass2");
+            var command = new ResetPasswordCommand(RESET_TOKEN, "pass1", "pass2");
+            var vc = createValidResetToken();
+
+            when(verificationCodeRepository.findByCode(RESET_TOKEN)).thenReturn(Optional.of(vc));
 
             assertThatThrownBy(() -> userService.resetPassword(command))
                     .isInstanceOf(PasswordMismatchException.class);

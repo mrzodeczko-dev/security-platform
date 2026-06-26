@@ -32,7 +32,7 @@ class TransactionalUserServiceTest {
     @Test
     @DisplayName("register - delegates to underlying service and returns result")
     void register_delegatesToUnderlyingService() {
-        var command = new RegisterUserCommand("john", "john@example.com", "pass123", "pass123", Role.USER);
+        var command = new RegisterUserCommand("john", "john@example.com", "pass123", "pass123");
         when(delegate.register(command)).thenReturn("User registered successfully");
 
         String result = transactionalUserService.register(command);
@@ -88,7 +88,7 @@ class TransactionalUserServiceTest {
     @Test
     @DisplayName("resetPassword - delegates to underlying service and returns result")
     void resetPassword_delegatesToUnderlyingService() {
-        var command = new ResetPasswordCommand("john@example.com", "newPass123", "newPass123");
+        var command = new ResetPasswordCommand("reset-token-uuid", "newPass123", "newPass123");
         when(delegate.resetPassword(command)).thenReturn("Password reset successfully");
 
         String result = transactionalUserService.resetPassword(command);

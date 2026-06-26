@@ -70,7 +70,7 @@ public class UserController {
             @Valid @RequestBody ResetPasswordRequestDto req
     ) {
         var username = userService.resetPassword(
-                new ResetPasswordCommand(req.email(), req.password(), req.passwordConfirmation()));
+                new ResetPasswordCommand(req.resetToken(), req.password(), req.passwordConfirmation()));
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponseDto.data(username));
