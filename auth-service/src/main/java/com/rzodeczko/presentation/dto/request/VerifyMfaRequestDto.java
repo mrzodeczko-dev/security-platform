@@ -5,8 +5,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
 public record VerifyMfaRequestDto(
-        @NotBlank(message = "Username cannot be blank")
-        String username,
+        @NotBlank(message = "MFA ID cannot be blank")
+        String mfaId,
 
         @Min(value = 100000, message = "Code must be a 6-digit number")
         @Max(value = 999999, message = "Code must be a 6-digit number")

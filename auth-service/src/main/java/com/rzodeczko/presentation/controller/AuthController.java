@@ -34,7 +34,7 @@ public class AuthController {
 
         if (result.mfaRequired()) {
             return ResponseEntity.ok(ApiResponseDto.data(
-                    new LoginResponseDto(true, result.usernameForMfa(), null)
+                    new LoginResponseDto(true, result.mfaId(), result.usernameForMfa(), null)
             ));
         }
 
@@ -42,7 +42,7 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponseDto.data(new LoginResponseDto(
-                        false, null, new AccessTokenResponseDto(result.tokens().accessToken())
+                        false, null, null, new AccessTokenResponseDto(result.tokens().accessToken())
                 )));
     }
 
@@ -51,7 +51,7 @@ public class AuthController {
             @Valid @RequestBody VerifyMfaRequestDto req,
             HttpServletResponse httpResponse
     ) {
-        var result = authService.verifyMfa(new VerifyMfaCommand(req.username(), req.code()));
+        var result = authService.verifyMfa(new VerifyMfaCommand(req.mfaId(), req.code()));
         addRefreshTokenCookie(httpResponse, result.tokens().refreshToken());
         return ResponseEntity
                 .status(HttpStatus.CREATED)

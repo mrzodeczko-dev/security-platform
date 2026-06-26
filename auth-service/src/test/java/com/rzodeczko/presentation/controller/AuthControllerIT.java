@@ -58,7 +58,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
     }
 
     @Test
-    void login_mfaRequired_returns200WithMfaFlag() throws Exception {
+    void login_mfaRequired_returns200WithMfaIdAndFlag() throws Exception {
         stubCredentials(true);
 
         mockMvc.perform(post("/auth/login")
@@ -68,6 +68,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.mfaRequired").value(true))
+                .andExpect(jsonPath("$.data.mfaId").isNotEmpty())
                 .andExpect(jsonPath("$.data.usernameForMfa").value("john"));
     }
 
@@ -109,15 +110,17 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
 
 
     @Test
-    void mfa_validCode_returns201WithAccessTokenAndCookie() throws Exception {
+    void mfa_validMfaIdAndCode_returns201WithAccessTokenAndCookie() throws Exception {
+        var mfaId = "test-mfa-session-id";
+        mfaCacheAdapter.storeMfaSession(mfaId, "john");
         mfaCacheAdapter.put("john", new MfaData(USER_ID, "john", "USER", MFA_SECRET));
         given(mfaVerificationPort.verify(MFA_SECRET, 482910)).willReturn(true);
 
         mockMvc.perform(post("/auth/mfa")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username":"john","code":482910}
-                                """))
+                                {"mfaId":"%s","code":482910}
+                                """.formatted(mfaId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
                 .andExpect(cookie().exists("refresh-token"))
@@ -125,17 +128,29 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
     }
 
     @Test
-    void mfa_invalidCode_returns401() throws Exception {
+    void mfa_validMfaId_invalidCode_returns401() throws Exception {
+        var mfaId = "test-mfa-session-id-2";
+        mfaCacheAdapter.storeMfaSession(mfaId, "john");
         mfaCacheAdapter.put("john", new MfaData(USER_ID, "john", "USER", MFA_SECRET));
         given(mfaVerificationPort.verify(MFA_SECRET, 111111)).willReturn(false);
 
         mockMvc.perform(post("/auth/mfa")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username":"john","code":111111}
-                                """))
+                                {"mfaId":"%s","code":111111}
+                                """.formatted(mfaId)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").isNotEmpty());
+    }
+
+    @Test
+    void mfa_invalidMfaId_returns401() throws Exception {
+        mockMvc.perform(post("/auth/mfa")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"mfaId":"nonexistent-mfa-id","code":123456}
+                                """))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -143,24 +158,32 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
         mockMvc.perform(post("/auth/mfa")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username":"john","code":99}
+                                {"mfaId":"some-id","code":99}
                                 """))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void mfa_userNotInCacheAndUserServiceReturns404_propagates404() throws Exception {
-        // Cache is empty — service falls back to /internal/users/mfa
+    void mfa_validMfaId_cacheMiss_fetchesFromUserService() throws Exception {
+        var mfaId = "test-mfa-session-id-3";
+        mfaCacheAdapter.storeMfaSession(mfaId, "john");
+        // MFA data NOT in cache — will fall back to user-service
         getWireMockServer().stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(urlEqualTo("/internal/users/mfa"))
                 .withHeader("X-Internal-Secret", equalTo(INTERNAL_SECRET))
-                .willReturn(aResponse().withStatus(404).withBody("Not found")));
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {"userId":"%s","username":"john","role":"USER","mfaSecret":"%s"}
+                                """.formatted(USER_ID, MFA_SECRET))));
+        given(mfaVerificationPort.verify(MFA_SECRET, 482910)).willReturn(true);
 
         mockMvc.perform(post("/auth/mfa")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username":"nonexistent","code":123456}
-                                """))
-                .andExpect(status().isNotFound());
+                                {"mfaId":"%s","code":482910}
+                                """.formatted(mfaId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty());
     }
 
 

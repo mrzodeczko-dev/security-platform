@@ -10,6 +10,7 @@ import com.rzodeczko.application.port.TokenPort;
 import com.rzodeczko.application.port.UserVerificationPort;
 import com.rzodeczko.domain.exception.InvalidTokenException;
 import com.rzodeczko.domain.exception.MfaAuthorizationFailedException;
+import com.rzodeczko.domain.exception.MfaSessionNotFoundException;
 import com.rzodeczko.domain.model.MfaData;
 import com.rzodeczko.domain.model.TokenInfo;
 import com.rzodeczko.domain.model.TokenType;
@@ -66,52 +67,73 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void login_withMfaRequired_returnsMfaFlag_andSkipsTokenGeneration() {
+    void login_withMfaRequired_returnsMfaIdAndFlag_andSkipsTokenGeneration() {
         var credentials = new UserCredentials(userId, "john", "USER", true);
         given(userVerificationPort.verifyCredentials("john", "pass")).willReturn(credentials);
 
         var result = authService.login(new LoginCommand("john", "pass"));
 
         assertThat(result.mfaRequired()).isTrue();
+        assertThat(result.mfaId()).isNotBlank();
         assertThat(result.usernameForMfa()).isEqualTo("john");
         assertThat(result.tokens()).isNull();
         then(tokenPort).shouldHaveNoInteractions();
+        then(mfaCachePort).should().storeMfaSession(result.mfaId(), "john");
     }
 
 
     @Test
-    void verifyMfa_cacheHit_verifiesAndReturnsTokens() {
+    void verifyMfa_validMfaId_cacheHit_verifiesAndReturnsTokens() {
+        var mfaId = "test-mfa-id";
         var mfaData = new MfaData(userId, "john", "USER", "SECRET");
+        given(mfaCachePort.getMfaSession(mfaId)).willReturn(Optional.of("john"));
         given(mfaCachePort.get("john")).willReturn(Optional.of(mfaData));
         given(mfaVerificationPort.verify("SECRET", 482910)).willReturn(true);
         given(tokenPort.generate(userId, "john", "USER")).willReturn(tokenPair);
 
-        var result = authService.verifyMfa(new VerifyMfaCommand("john", 482910));
+        var result = authService.verifyMfa(new VerifyMfaCommand(mfaId, 482910));
 
         assertThat(result.tokens()).isEqualTo(tokenPair);
         then(userVerificationPort).shouldHaveNoInteractions();
+        then(mfaCachePort).should().deleteMfaSession(mfaId);
     }
 
     @Test
-    void verifyMfa_cacheMiss_fetchesFromUserServiceAndCaches() {
+    void verifyMfa_validMfaId_cacheMiss_fetchesFromUserServiceAndCaches() {
+        var mfaId = "test-mfa-id";
         var mfaData = new MfaData(userId, "john", "USER", "SECRET");
+        given(mfaCachePort.getMfaSession(mfaId)).willReturn(Optional.of("john"));
         given(mfaCachePort.get("john")).willReturn(Optional.empty());
         given(userVerificationPort.getMfaData("john")).willReturn(mfaData);
         given(mfaVerificationPort.verify("SECRET", 482910)).willReturn(true);
         given(tokenPort.generate(userId, "john", "USER")).willReturn(tokenPair);
 
-        authService.verifyMfa(new VerifyMfaCommand("john", 482910));
+        authService.verifyMfa(new VerifyMfaCommand(mfaId, 482910));
 
         then(mfaCachePort).should().put("john", mfaData);
+        then(mfaCachePort).should().deleteMfaSession(mfaId);
     }
 
     @Test
-    void verifyMfa_invalidCode_throwsMfaAuthorizationFailedException() {
+    void verifyMfa_invalidMfaId_throwsMfaSessionNotFoundException() {
+        given(mfaCachePort.getMfaSession("invalid-id")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.verifyMfa(new VerifyMfaCommand("invalid-id", 482910)))
+                .isInstanceOf(MfaSessionNotFoundException.class);
+
+        then(tokenPort).shouldHaveNoInteractions();
+        then(mfaVerificationPort).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void verifyMfa_validMfaId_invalidCode_throwsMfaAuthorizationFailedException() {
+        var mfaId = "test-mfa-id";
         var mfaData = new MfaData(userId, "john", "USER", "SECRET");
+        given(mfaCachePort.getMfaSession(mfaId)).willReturn(Optional.of("john"));
         given(mfaCachePort.get("john")).willReturn(Optional.of(mfaData));
         given(mfaVerificationPort.verify("SECRET", 111111)).willReturn(false);
 
-        assertThatThrownBy(() -> authService.verifyMfa(new VerifyMfaCommand("john", 111111)))
+        assertThatThrownBy(() -> authService.verifyMfa(new VerifyMfaCommand(mfaId, 111111)))
                 .isInstanceOf(MfaAuthorizationFailedException.class);
 
         then(tokenPort).shouldHaveNoInteractions();

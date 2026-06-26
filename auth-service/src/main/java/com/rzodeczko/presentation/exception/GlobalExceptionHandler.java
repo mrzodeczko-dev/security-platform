@@ -2,6 +2,7 @@ package com.rzodeczko.presentation.exception;
 
 import com.rzodeczko.domain.exception.InvalidTokenException;
 import com.rzodeczko.domain.exception.MfaAuthorizationFailedException;
+import com.rzodeczko.domain.exception.MfaSessionNotFoundException;
 import com.rzodeczko.domain.exception.UserServiceUnavailableException;
 import com.rzodeczko.presentation.dto.response.ApiResponseDto;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MfaAuthorizationFailedException.class)
     public ResponseEntity<ApiResponseDto<Void>> handleMfaFailed(MfaAuthorizationFailedException e) {
         log.warn("MFA authorization failed: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponseDto.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(MfaSessionNotFoundException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleMfaSessionNotFound(MfaSessionNotFoundException e) {
+        log.warn("MFA session not found: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponseDto.error(e.getMessage()));

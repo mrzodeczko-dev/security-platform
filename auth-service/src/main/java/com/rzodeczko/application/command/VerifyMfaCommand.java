@@ -1,4 +1,4 @@
 package com.rzodeczko.application.command;
 
-public record VerifyMfaCommand(String username, int code) {
+public record VerifyMfaCommand(String mfaId, int code) {
 }

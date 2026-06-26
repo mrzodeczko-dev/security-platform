@@ -12,8 +12,11 @@ import com.rzodeczko.application.port.UserVerificationPort;
 import com.rzodeczko.application.service.AuthService;
 import com.rzodeczko.domain.exception.InvalidTokenException;
 import com.rzodeczko.domain.exception.MfaAuthorizationFailedException;
+import com.rzodeczko.domain.exception.MfaSessionNotFoundException;
 import com.rzodeczko.domain.model.MfaData;
 import com.rzodeczko.domain.model.TokenType;
+
+import java.util.UUID;
 
 public class AuthServiceImpl implements AuthService {
 
@@ -41,7 +44,9 @@ public class AuthServiceImpl implements AuthService {
         );
 
         if (credentials.mfaRequired()) {
-            return LoginResultDto.mfaRequired(command.username());
+            var mfaId = UUID.randomUUID().toString();
+            mfaCachePort.storeMfaSession(mfaId, command.username());
+            return LoginResultDto.mfaRequired(mfaId, command.username());
         }
 
         var tokens = tokenPort.generate(
@@ -55,16 +60,23 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResultDto verifyMfa(VerifyMfaCommand command) {
-        MfaData mfaData = mfaCachePort.get(command.username())
+        // Verify mfaId is bound to a valid login session
+        var username = mfaCachePort.getMfaSession(command.mfaId())
+                .orElseThrow(MfaSessionNotFoundException::new);
+
+        MfaData mfaData = mfaCachePort.get(username)
                 .orElseGet(() -> {
-                    var data = userVerificationPort.getMfaData(command.username());
-                    mfaCachePort.put(command.username(), data);
+                    var data = userVerificationPort.getMfaData(username);
+                    mfaCachePort.put(username, data);
                     return data;
                 });
 
         if (!mfaVerificationPort.verify(mfaData.mfaSecret(), command.code())) {
             throw new MfaAuthorizationFailedException();
         }
+
+        // One-time use: delete MFA session after successful verification
+        mfaCachePort.deleteMfaSession(command.mfaId());
 
         var tokens = tokenPort.generate(
                 mfaData.userId(),

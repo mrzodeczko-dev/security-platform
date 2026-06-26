@@ -61,6 +61,40 @@ public class RedisMfaCacheAdapter implements MfaCachePort {
         log.info("MFA cache invalidated for username={}, deleted={}", username, deleted);
     }
 
+    @Override
+    public void storeMfaSession(String mfaId, String username) {
+        var key = "mfa-session:" + mfaId;
+        try {
+            stringRedisTemplate.opsForValue().set(key, username, Duration.ofSeconds(mfaCacheProperties.ttlSeconds()));
+            log.debug("MFA session stored in Redis: mfaId={}, username={}, TTL={}s", mfaId, username, mfaCacheProperties.ttlSeconds());
+        } catch (Exception e) {
+            log.warn("MFA session store failed for mfaId={}: {}", mfaId, e.getMessage());
+        }
+    }
+
+    @Override
+    public Optional<String> getMfaSession(String mfaId) {
+        var key = "mfa-session:" + mfaId;
+        try {
+            var username = stringRedisTemplate.opsForValue().get(key);
+            if (username == null) {
+                log.debug("MFA session not found for mfaId={}", mfaId);
+                return Optional.empty();
+            }
+            return Optional.of(username);
+        } catch (Exception e) {
+            log.warn("MFA session get failed for mfaId={}: {}", mfaId, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public void deleteMfaSession(String mfaId) {
+        var key = "mfa-session:" + mfaId;
+        Boolean deleted = stringRedisTemplate.delete(key);
+        log.debug("MFA session deleted for mfaId={}, deleted={}", mfaId, deleted);
+    }
+
     private String buildKey(String username) {
         return mfaCacheProperties.keyPrefix() + username;
     }
