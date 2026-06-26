@@ -9,6 +9,7 @@ import com.rzodeczko.application.port.MfaSetupPort;
 import com.rzodeczko.application.port.PasswordEncoderPort;
 import com.rzodeczko.application.service.UserService;
 import com.rzodeczko.domain.exception.*;
+import com.rzodeczko.domain.model.Role;
 import com.rzodeczko.domain.model.User;
 import com.rzodeczko.domain.repository.UserRepository;
 import com.rzodeczko.domain.repository.VerificationCodeRepository;
@@ -49,7 +50,7 @@ public class UserServiceImpl implements UserService {
                 command.username(),
                 command.email(),
                 passwordEncoder.encode(command.password()),
-                command.role()
+                Role.USER
         );
 
         var savedUser = userRepository.save(user);

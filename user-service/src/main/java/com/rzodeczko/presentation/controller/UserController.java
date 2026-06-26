@@ -33,8 +33,7 @@ public class UserController {
                 req.username(),
                 req.email(),
                 req.password(),
-                req.passwordConfirmation(),
-                req.role()
+                req.passwordConfirmation()
         ));
         return ResponseEntity
                 .status(HttpStatus.CREATED)
