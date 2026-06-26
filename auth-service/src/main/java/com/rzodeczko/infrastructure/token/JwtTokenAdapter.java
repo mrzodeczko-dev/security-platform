@@ -26,6 +26,7 @@ public class JwtTokenAdapter implements TokenPort {
     @Override
     public TokenPairDto generate(UUID userId, String username, String role) {
         var now = new Date();
+        var refreshJti = UUID.randomUUID().toString();
         return new TokenPairDto(
                 buildToken(
                         userId,
@@ -33,7 +34,8 @@ public class JwtTokenAdapter implements TokenPort {
                         role,
                         now,
                         new Date(now.getTime() + jwtProperties.accessTokenExpirationMs()),
-                        TokenType.ACCESS
+                        TokenType.ACCESS,
+                        null
                 ),
                 buildToken(
                         userId,
@@ -41,7 +43,8 @@ public class JwtTokenAdapter implements TokenPort {
                         role,
                         now,
                         new Date(now.getTime() + jwtProperties.refreshTokenExpirationMs()),
-                        TokenType.REFRESH
+                        TokenType.REFRESH,
+                        refreshJti
                 )
         );
     }
@@ -58,7 +61,8 @@ public class JwtTokenAdapter implements TokenPort {
                     UUID.fromString(claims.getSubject()),
                     claims.get("username", String.class),
                     claims.get("role", String.class),
-                    TokenType.of(claims.get("type", String.class))
+                    TokenType.of(claims.get("type", String.class)),
+                    claims.getId()
             );
         } catch (JwtException | IllegalArgumentException e) {
             throw new InvalidTokenException(e.getMessage());
@@ -71,9 +75,10 @@ public class JwtTokenAdapter implements TokenPort {
             String role,
             Date issuedAt,
             Date expiration,
-            TokenType type
+            TokenType type,
+            String jti
     ) {
-        return Jwts
+        var builder = Jwts
                 .builder()
                 .header().add("typ", "JWT")
                 .and()
@@ -86,7 +91,12 @@ public class JwtTokenAdapter implements TokenPort {
                         "username", username,
                         "role", role
                 ))
-                .signWith(secretKey)
-                .compact();
+                .signWith(secretKey);
+
+        if (jti != null) {
+            builder.id(jti);
+        }
+
+        return builder.compact();
     }
 }

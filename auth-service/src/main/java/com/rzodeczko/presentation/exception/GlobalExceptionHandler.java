@@ -1,9 +1,6 @@
 package com.rzodeczko.presentation.exception;
 
-import com.rzodeczko.domain.exception.InvalidTokenException;
-import com.rzodeczko.domain.exception.MfaAuthorizationFailedException;
-import com.rzodeczko.domain.exception.MfaSessionNotFoundException;
-import com.rzodeczko.domain.exception.UserServiceUnavailableException;
+import com.rzodeczko.domain.exception.*;
 import com.rzodeczko.presentation.dto.response.ApiResponseDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -56,6 +53,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MfaSessionNotFoundException.class)
     public ResponseEntity<ApiResponseDto<Void>> handleMfaSessionNotFound(MfaSessionNotFoundException e) {
         log.warn("MFA session not found: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponseDto.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(RefreshTokenRevokedException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleRefreshTokenRevoked(RefreshTokenRevokedException e) {
+        log.warn("Refresh token revoked: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponseDto.error(e.getMessage()));

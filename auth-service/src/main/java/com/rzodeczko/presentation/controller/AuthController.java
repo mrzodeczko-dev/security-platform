@@ -1,6 +1,7 @@
 package com.rzodeczko.presentation.controller;
 
 import com.rzodeczko.application.command.LoginCommand;
+import com.rzodeczko.application.command.LogoutCommand;
 import com.rzodeczko.application.command.RefreshTokenCommand;
 import com.rzodeczko.application.command.VerifyMfaCommand;
 import com.rzodeczko.application.service.AuthService;
@@ -71,7 +72,13 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponseDto<String>> logout(HttpServletResponse httpResponse) {
+    public ResponseEntity<ApiResponseDto<String>> logout(
+            @CookieValue(name = "refresh-token", required = false) String refreshToken,
+            HttpServletResponse httpResponse
+    ) {
+        if (refreshToken != null) {
+            authService.logout(new LogoutCommand(refreshToken));
+        }
         Cookie cookie = new Cookie("refresh-token", "");
         cookie.setHttpOnly(true);
         cookie.setPath("/auth/refresh");

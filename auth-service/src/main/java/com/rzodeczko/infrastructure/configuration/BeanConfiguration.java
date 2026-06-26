@@ -3,6 +3,7 @@ package com.rzodeczko.infrastructure.configuration;
 
 import com.rzodeczko.application.port.MfaCachePort;
 import com.rzodeczko.application.port.MfaVerificationPort;
+import com.rzodeczko.application.port.RefreshTokenPort;
 import com.rzodeczko.application.port.TokenPort;
 import com.rzodeczko.application.port.UserVerificationPort;
 import com.rzodeczko.application.service.AuthService;
@@ -64,13 +65,15 @@ public class BeanConfiguration {
             UserVerificationPort userVerificationPort,
             TokenPort tokenPort,
             MfaCachePort mfaCachePort,
-            MfaVerificationPort mfaVerificationPort
+            MfaVerificationPort mfaVerificationPort,
+            RefreshTokenPort refreshTokenPort
     ) {
         return new AuthServiceImpl(
                 userVerificationPort,
                 tokenPort,
                 mfaCachePort,
-                mfaVerificationPort
+                mfaVerificationPort,
+                refreshTokenPort
         );
     }
 }

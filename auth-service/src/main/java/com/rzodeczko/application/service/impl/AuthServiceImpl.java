@@ -1,18 +1,21 @@
 package com.rzodeczko.application.service.impl;
 
 import com.rzodeczko.application.command.LoginCommand;
+import com.rzodeczko.application.command.LogoutCommand;
 import com.rzodeczko.application.command.RefreshTokenCommand;
 import com.rzodeczko.application.command.VerifyMfaCommand;
 import com.rzodeczko.application.dto.LoginResultDto;
 import com.rzodeczko.application.dto.TokenPairDto;
 import com.rzodeczko.application.port.MfaCachePort;
 import com.rzodeczko.application.port.MfaVerificationPort;
+import com.rzodeczko.application.port.RefreshTokenPort;
 import com.rzodeczko.application.port.TokenPort;
 import com.rzodeczko.application.port.UserVerificationPort;
 import com.rzodeczko.application.service.AuthService;
 import com.rzodeczko.domain.exception.InvalidTokenException;
 import com.rzodeczko.domain.exception.MfaAuthorizationFailedException;
 import com.rzodeczko.domain.exception.MfaSessionNotFoundException;
+import com.rzodeczko.domain.exception.RefreshTokenRevokedException;
 import com.rzodeczko.domain.model.MfaData;
 import com.rzodeczko.domain.model.TokenType;
 
@@ -24,16 +27,19 @@ public class AuthServiceImpl implements AuthService {
     private final TokenPort tokenPort;
     private final MfaCachePort mfaCachePort;
     private final MfaVerificationPort mfaVerificationPort;
+    private final RefreshTokenPort refreshTokenPort;
 
     public AuthServiceImpl(
             UserVerificationPort userVerificationPort,
             TokenPort tokenPort,
             MfaCachePort mfaCachePort,
-            MfaVerificationPort mfaVerificationPort) {
+            MfaVerificationPort mfaVerificationPort,
+            RefreshTokenPort refreshTokenPort) {
         this.userVerificationPort = userVerificationPort;
         this.tokenPort = tokenPort;
         this.mfaCachePort = mfaCachePort;
         this.mfaVerificationPort = mfaVerificationPort;
+        this.refreshTokenPort = refreshTokenPort;
     }
 
     @Override
@@ -55,12 +61,13 @@ public class AuthServiceImpl implements AuthService {
                 credentials.role()
         );
 
+        storeRefreshToken(tokens.refreshToken(), credentials.userId());
+
         return LoginResultDto.withTokens(tokens);
     }
 
     @Override
     public LoginResultDto verifyMfa(VerifyMfaCommand command) {
-        // Verify mfaId is bound to a valid login session
         var username = mfaCachePort.getMfaSession(command.mfaId())
                 .orElseThrow(MfaSessionNotFoundException::new);
 
@@ -75,7 +82,6 @@ public class AuthServiceImpl implements AuthService {
             throw new MfaAuthorizationFailedException();
         }
 
-        // One-time use: delete MFA session after successful verification
         mfaCachePort.deleteMfaSession(command.mfaId());
 
         var tokens = tokenPort.generate(
@@ -83,6 +89,8 @@ public class AuthServiceImpl implements AuthService {
                 mfaData.username(),
                 mfaData.role()
         );
+
+        storeRefreshToken(tokens.refreshToken(), mfaData.userId());
 
         return LoginResultDto.withTokens(tokens);
     }
@@ -97,10 +105,41 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        return tokenPort.generate(
+        // Verify token exists in database (not revoked)
+        if (!refreshTokenPort.exists(tokenInfo.jti())) {
+            throw new RefreshTokenRevokedException();
+        }
+
+        // Rotation: revoke old, issue new
+        refreshTokenPort.delete(tokenInfo.jti());
+
+        var newTokens = tokenPort.generate(
                 tokenInfo.userId(),
                 tokenInfo.username(),
                 tokenInfo.role()
         );
+
+        storeRefreshToken(newTokens.refreshToken(), tokenInfo.userId());
+
+        return newTokens;
+    }
+
+    @Override
+    public void logout(LogoutCommand command) {
+        try {
+            var tokenInfo = tokenPort.parse(command.refreshToken());
+            if (tokenInfo.jti() != null) {
+                refreshTokenPort.delete(tokenInfo.jti());
+            }
+        } catch (InvalidTokenException e) {
+            // Token already expired or invalid — nothing to revoke
+        }
+    }
+
+    private void storeRefreshToken(String rawToken, UUID userId) {
+        var info = tokenPort.parse(rawToken);
+        if (info.jti() != null) {
+            refreshTokenPort.save(info.jti(), userId);
+        }
     }
 }

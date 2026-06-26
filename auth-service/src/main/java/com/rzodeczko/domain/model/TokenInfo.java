@@ -6,6 +6,7 @@ public record TokenInfo(
         UUID userId,
         String username,
         String role,
-        TokenType type
+        TokenType type,
+        String jti
 ) {
 }

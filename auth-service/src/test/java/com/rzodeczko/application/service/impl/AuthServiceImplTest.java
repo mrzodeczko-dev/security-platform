@@ -1,16 +1,19 @@
 package com.rzodeczko.application.service.impl;
 
 import com.rzodeczko.application.command.LoginCommand;
+import com.rzodeczko.application.command.LogoutCommand;
 import com.rzodeczko.application.command.RefreshTokenCommand;
 import com.rzodeczko.application.command.VerifyMfaCommand;
 import com.rzodeczko.application.dto.TokenPairDto;
 import com.rzodeczko.application.port.MfaCachePort;
 import com.rzodeczko.application.port.MfaVerificationPort;
+import com.rzodeczko.application.port.RefreshTokenPort;
 import com.rzodeczko.application.port.TokenPort;
 import com.rzodeczko.application.port.UserVerificationPort;
 import com.rzodeczko.domain.exception.InvalidTokenException;
 import com.rzodeczko.domain.exception.MfaAuthorizationFailedException;
 import com.rzodeczko.domain.exception.MfaSessionNotFoundException;
+import com.rzodeczko.domain.exception.RefreshTokenRevokedException;
 import com.rzodeczko.domain.model.MfaData;
 import com.rzodeczko.domain.model.TokenInfo;
 import com.rzodeczko.domain.model.TokenType;
@@ -27,6 +30,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -41,11 +46,14 @@ class AuthServiceImplTest {
     private MfaCachePort mfaCachePort;
     @Mock
     private MfaVerificationPort mfaVerificationPort;
+    @Mock
+    private RefreshTokenPort refreshTokenPort;
 
     @InjectMocks
     private AuthServiceImpl authService;
 
     private UUID userId;
+    private static final String JTI = "test-jti-uuid";
     private final TokenPairDto tokenPair = new TokenPairDto("access-token", "refresh-token");
 
     @BeforeEach
@@ -53,17 +61,23 @@ class AuthServiceImplTest {
         userId = UUID.randomUUID();
     }
 
+    // ==========================================
+    // login
+    // ==========================================
+
     @Test
-    void login_withoutMfa_returnsTokenPair() {
+    void login_withoutMfa_returnsTokenPairAndStoresRefreshToken() {
         var credentials = new UserCredentials(userId, "john", "USER", false);
         given(userVerificationPort.verifyCredentials("john", "pass")).willReturn(credentials);
         given(tokenPort.generate(userId, "john", "USER")).willReturn(tokenPair);
+        given(tokenPort.parse("refresh-token")).willReturn(
+                new TokenInfo(userId, "john", "USER", TokenType.REFRESH, JTI));
 
         var result = authService.login(new LoginCommand("john", "pass"));
 
         assertThat(result.mfaRequired()).isFalse();
         assertThat(result.tokens()).isEqualTo(tokenPair);
-        assertThat(result.usernameForMfa()).isNull();
+        then(refreshTokenPort).should().save(JTI, userId);
     }
 
     @Test
@@ -78,24 +92,30 @@ class AuthServiceImplTest {
         assertThat(result.usernameForMfa()).isEqualTo("john");
         assertThat(result.tokens()).isNull();
         then(tokenPort).shouldHaveNoInteractions();
+        then(refreshTokenPort).shouldHaveNoInteractions();
         then(mfaCachePort).should().storeMfaSession(result.mfaId(), "john");
     }
 
+    // ==========================================
+    // verifyMfa
+    // ==========================================
 
     @Test
-    void verifyMfa_validMfaId_cacheHit_verifiesAndReturnsTokens() {
+    void verifyMfa_validMfaId_cacheHit_verifiesAndStoresRefreshToken() {
         var mfaId = "test-mfa-id";
         var mfaData = new MfaData(userId, "john", "USER", "SECRET");
         given(mfaCachePort.getMfaSession(mfaId)).willReturn(Optional.of("john"));
         given(mfaCachePort.get("john")).willReturn(Optional.of(mfaData));
         given(mfaVerificationPort.verify("SECRET", 482910)).willReturn(true);
         given(tokenPort.generate(userId, "john", "USER")).willReturn(tokenPair);
+        given(tokenPort.parse("refresh-token")).willReturn(
+                new TokenInfo(userId, "john", "USER", TokenType.REFRESH, JTI));
 
         var result = authService.verifyMfa(new VerifyMfaCommand(mfaId, 482910));
 
         assertThat(result.tokens()).isEqualTo(tokenPair);
-        then(userVerificationPort).shouldHaveNoInteractions();
         then(mfaCachePort).should().deleteMfaSession(mfaId);
+        then(refreshTokenPort).should().save(JTI, userId);
     }
 
     @Test
@@ -107,11 +127,14 @@ class AuthServiceImplTest {
         given(userVerificationPort.getMfaData("john")).willReturn(mfaData);
         given(mfaVerificationPort.verify("SECRET", 482910)).willReturn(true);
         given(tokenPort.generate(userId, "john", "USER")).willReturn(tokenPair);
+        given(tokenPort.parse("refresh-token")).willReturn(
+                new TokenInfo(userId, "john", "USER", TokenType.REFRESH, JTI));
 
         authService.verifyMfa(new VerifyMfaCommand(mfaId, 482910));
 
         then(mfaCachePort).should().put("john", mfaData);
         then(mfaCachePort).should().deleteMfaSession(mfaId);
+        then(refreshTokenPort).should().save(JTI, userId);
     }
 
     @Test
@@ -139,21 +162,45 @@ class AuthServiceImplTest {
         then(tokenPort).shouldHaveNoInteractions();
     }
 
+    // ==========================================
+    // refresh
+    // ==========================================
 
     @Test
-    void refresh_validRefreshToken_returnsNewTokenPair() {
-        var tokenInfo = new TokenInfo(userId, "john", "USER", TokenType.REFRESH);
+    void refresh_validRefreshToken_rotatesAndReturnsNewTokenPair() {
+        var tokenInfo = new TokenInfo(userId, "john", "USER", TokenType.REFRESH, JTI);
+        var newTokenPair = new TokenPairDto("new-access", "new-refresh");
+        var newJti = "new-jti";
         given(tokenPort.parse("refresh-jwt")).willReturn(tokenInfo);
-        given(tokenPort.generate(userId, "john", "USER")).willReturn(tokenPair);
+        given(refreshTokenPort.exists(JTI)).willReturn(true);
+        given(tokenPort.generate(userId, "john", "USER")).willReturn(newTokenPair);
+        given(tokenPort.parse("new-refresh")).willReturn(
+                new TokenInfo(userId, "john", "USER", TokenType.REFRESH, newJti));
 
         var result = authService.refresh(new RefreshTokenCommand("refresh-jwt"));
 
-        assertThat(result).isEqualTo(tokenPair);
+        assertThat(result).isEqualTo(newTokenPair);
+        then(refreshTokenPort).should().delete(JTI);
+        then(refreshTokenPort).should().save(newJti, userId);
+    }
+
+    @Test
+    void refresh_revokedToken_throwsRefreshTokenRevokedException() {
+        var tokenInfo = new TokenInfo(userId, "john", "USER", TokenType.REFRESH, JTI);
+        given(tokenPort.parse("revoked-jwt")).willReturn(tokenInfo);
+        given(refreshTokenPort.exists(JTI)).willReturn(false);
+
+        assertThatThrownBy(() -> authService.refresh(new RefreshTokenCommand("revoked-jwt")))
+                .isInstanceOf(RefreshTokenRevokedException.class);
+
+        then(tokenPort).should().parse("revoked-jwt");
+        then(refreshTokenPort).should().exists(JTI);
+        then(tokenPort).shouldHaveNoMoreInteractions();
     }
 
     @Test
     void refresh_accessTokenPassedAsRefresh_throwsInvalidTokenException() {
-        var tokenInfo = new TokenInfo(userId, "john", "USER", TokenType.ACCESS);
+        var tokenInfo = new TokenInfo(userId, "john", "USER", TokenType.ACCESS, null);
         given(tokenPort.parse("access-jwt")).willReturn(tokenInfo);
 
         assertThatThrownBy(() -> authService.refresh(new RefreshTokenCommand("access-jwt")))
@@ -167,5 +214,28 @@ class AuthServiceImplTest {
 
         assertThatThrownBy(() -> authService.refresh(new RefreshTokenCommand("garbage")))
                 .isInstanceOf(InvalidTokenException.class);
+    }
+
+    // ==========================================
+    // logout
+    // ==========================================
+
+    @Test
+    void logout_validToken_deletesRefreshTokenFromStore() {
+        var tokenInfo = new TokenInfo(userId, "john", "USER", TokenType.REFRESH, JTI);
+        given(tokenPort.parse("refresh-jwt")).willReturn(tokenInfo);
+
+        authService.logout(new LogoutCommand("refresh-jwt"));
+
+        then(refreshTokenPort).should().delete(JTI);
+    }
+
+    @Test
+    void logout_expiredOrInvalidToken_doesNotThrow() {
+        given(tokenPort.parse("expired-jwt")).willThrow(new InvalidTokenException("expired"));
+
+        authService.logout(new LogoutCommand("expired-jwt"));
+
+        then(refreshTokenPort).shouldHaveNoInteractions();
     }
 }

@@ -3,6 +3,7 @@ package com.rzodeczko.presentation.controller;
 import com.rzodeczko.application.port.MfaVerificationPort;
 import com.rzodeczko.domain.model.MfaData;
 import com.rzodeczko.infrastructure.cache.RedisMfaCacheAdapter;
+import com.rzodeczko.infrastructure.cache.RedisRefreshTokenAdapter;
 import com.rzodeczko.infrastructure.token.JwtTokenAdapter;
 import com.rzodeczko.support.AbstractWireMockIntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -30,6 +32,8 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
     private MockMvc mockMvc;
     @Autowired
     private RedisMfaCacheAdapter mfaCacheAdapter;
+    @Autowired
+    private RedisRefreshTokenAdapter refreshTokenAdapter;
     @Autowired
     private JwtTokenAdapter jwtTokenAdapter;
 
@@ -190,6 +194,10 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
     @Test
     void refresh_validCookie_returns201WithNewToken() throws Exception {
         var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER");
+        // Store the refresh token JTI in Redis (simulates login)
+        var tokenInfo = jwtTokenAdapter.parse(tokens.refreshToken());
+        refreshTokenAdapter.save(tokenInfo.jti(), USER_ID);
+
         var cookie = new MockCookie("refresh-token", tokens.refreshToken());
         cookie.setPath("/auth/refresh");
 
@@ -197,6 +205,20 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
                 .andExpect(cookie().exists("refresh-token"));
+
+        // Old JTI should be revoked after rotation
+        assertThat(refreshTokenAdapter.exists(tokenInfo.jti())).isFalse();
+    }
+
+    @Test
+    void refresh_revokedToken_returns401() throws Exception {
+        var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER");
+        // Do NOT store JTI — simulates revoked token
+        var cookie = new MockCookie("refresh-token", tokens.refreshToken());
+        cookie.setPath("/auth/refresh");
+
+        mockMvc.perform(post("/auth/refresh").cookie(cookie))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -217,7 +239,25 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
 
 
     @Test
-    void logout_returns200AndExpiresRefreshCookie() throws Exception {
+    void logout_withCookie_returns200AndRevokesToken() throws Exception {
+        var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER");
+        var tokenInfo = jwtTokenAdapter.parse(tokens.refreshToken());
+        refreshTokenAdapter.save(tokenInfo.jti(), USER_ID);
+
+        var cookie = new MockCookie("refresh-token", tokens.refreshToken());
+        cookie.setPath("/auth/refresh");
+
+        mockMvc.perform(post("/auth/logout").cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value("Logged out successfully"))
+                .andExpect(cookie().maxAge("refresh-token", 0));
+
+        // Token should be revoked in Redis
+        assertThat(refreshTokenAdapter.exists(tokenInfo.jti())).isFalse();
+    }
+
+    @Test
+    void logout_withoutCookie_returns200() throws Exception {
         mockMvc.perform(post("/auth/logout"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value("Logged out successfully"))
