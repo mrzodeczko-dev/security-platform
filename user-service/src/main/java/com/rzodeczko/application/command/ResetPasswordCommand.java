@@ -1,7 +1,7 @@
 package com.rzodeczko.application.command;
 
 public record ResetPasswordCommand(
-        String email,
+        String resetToken,
         String password,
         String passwordConfirmation
 ) {

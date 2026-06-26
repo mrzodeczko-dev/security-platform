@@ -5,6 +5,7 @@ import com.rzodeczko.application.command.ResetPasswordCommand;
 import com.rzodeczko.application.command.VerifyCredentialsCommand;
 import com.rzodeczko.application.service.UserService;
 import com.rzodeczko.domain.model.Role;
+import com.rzodeczko.domain.model.VerificationCode;
 import com.rzodeczko.domain.repository.VerificationCodeRepository;
 import com.rzodeczko.infrastructure.persistence.entity.VerificationCodeEntity;
 import com.rzodeczko.infrastructure.persistence.repository.JpaUserRepository;
@@ -66,7 +67,7 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         void fullFlow_shouldSucceed() {
             // --- register ---
             var registerCmd = new RegisterUserCommand(
-                    "integrationUser", "integration@test.com", "P@ssw0rd!", "P@ssw0rd!", Role.USER);
+                    "integrationUser", "integration@test.com", "P@ssw0rd!", "P@ssw0rd!");
 
             String registeredUsername = userService.register(registerCmd);
             assertThat(registeredUsername).isEqualTo("integrationUser");
@@ -126,7 +127,7 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         void resetPassword_shouldAllowLoginWithNewPassword() throws Exception {
             // register + activate
             var registerCmd = new RegisterUserCommand(
-                    "resetUser", "reset@test.com", "OldP@ss1", "OldP@ss1", Role.USER);
+                    "resetUser", "reset@test.com", "OldP@ss1", "OldP@ss1");
             userService.register(registerCmd);
 
             Thread.sleep(500);
@@ -135,8 +136,18 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
             var vcEntity = jpaVerificationCodeRepository.findByUserId(userEntity.getId()).orElseThrow();
             userService.activate(vcEntity.getCode());
 
-            // reset password
-            var resetCmd = new ResetPasswordCommand("reset@test.com", "NewP@ss2", "NewP@ss2");
+            // simulate password reset code sent via email
+            var resetCode = "123456";
+            var expiresAt = System.currentTimeMillis() + 300_000;
+            verificationCodeRepository.save(
+                    new VerificationCode(resetCode, expiresAt, userEntity.getId()));
+
+            // get one-time reset token
+            String resetToken = userService.getPasswordResetPermission(resetCode);
+            assertThat(resetToken).isNotBlank();
+
+            // reset password using token
+            var resetCmd = new ResetPasswordCommand(resetToken, "NewP@ss2", "NewP@ss2");
             String resetUsername = userService.resetPassword(resetCmd);
             assertThat(resetUsername).isEqualTo("resetUser");
 
@@ -149,6 +160,11 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
             var credentials = userService.verifyCredentials(
                     new VerifyCredentialsCommand("resetUser", "NewP@ss2"));
             assertThat(credentials.username()).isEqualTo("resetUser");
+
+            // token should be consumed — reuse should fail
+            assertThatThrownBy(() ->
+                    userService.resetPassword(new ResetPasswordCommand(resetToken, "Another1", "Another1")))
+                    .isInstanceOf(com.rzodeczko.domain.exception.VerificationCodeNotFoundException.class);
         }
     }
 
@@ -164,7 +180,7 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         void setupMfa_shouldReturnMfaRequired() throws Exception {
             // register + activate
             var registerCmd = new RegisterUserCommand(
-                    "mfaUser", "mfa@test.com", "P@ssw0rd!", "P@ssw0rd!", Role.USER);
+                    "mfaUser", "mfa@test.com", "P@ssw0rd!", "P@ssw0rd!");
             userService.register(registerCmd);
 
             Thread.sleep(500);
@@ -195,9 +211,9 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         @Test
         @DisplayName("admin should be able to promote user to admin")
         void adminShouldChangeUserRole() throws Exception {
-            // register admin
+            // register admin (registers as USER, then promote via DB)
             var adminCmd = new RegisterUserCommand(
-                    "adminUser", "admin@test.com", "AdminP@ss1", "AdminP@ss1", Role.ADMIN);
+                    "adminUser", "admin@test.com", "AdminP@ss1", "AdminP@ss1");
             userService.register(adminCmd);
 
             Thread.sleep(500);
@@ -206,9 +222,14 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
             var adminVc = jpaVerificationCodeRepository.findByUserId(adminEntity.getId()).orElseThrow();
             userService.activate(adminVc.getCode());
 
+            // promote to ADMIN directly in DB (since registration always creates USER)
+            adminEntity = jpaUserRepository.findByUsername("adminUser").orElseThrow();
+            adminEntity.setRole(Role.ADMIN);
+            jpaUserRepository.save(adminEntity);
+
             // register regular user
             var userCmd = new RegisterUserCommand(
-                    "regularUser", "regular@test.com", "UserP@ss1", "UserP@ss1", Role.USER);
+                    "regularUser", "regular@test.com", "UserP@ss1", "UserP@ss1");
             userService.register(userCmd);
 
             Thread.sleep(500);
@@ -240,11 +261,11 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         @DisplayName("should reject duplicate username")
         void shouldRejectDuplicateUsername() {
             var cmd1 = new RegisterUserCommand(
-                    "dupeUser", "dupe1@test.com", "P@ss1", "P@ss1", Role.USER);
+                    "dupeUser", "dupe1@test.com", "P@ss1", "P@ss1");
             userService.register(cmd1);
 
             var cmd2 = new RegisterUserCommand(
-                    "dupeUser", "dupe2@test.com", "P@ss1", "P@ss1", Role.USER);
+                    "dupeUser", "dupe2@test.com", "P@ss1", "P@ss1");
 
             assertThatThrownBy(() -> userService.register(cmd2))
                     .isInstanceOf(com.rzodeczko.domain.exception.UsernameAlreadyExistsException.class);
@@ -254,11 +275,11 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         @DisplayName("should reject duplicate email")
         void shouldRejectDuplicateEmail() {
             var cmd1 = new RegisterUserCommand(
-                    "emailUser1", "same@test.com", "P@ss1", "P@ss1", Role.USER);
+                    "emailUser1", "same@test.com", "P@ss1", "P@ss1");
             userService.register(cmd1);
 
             var cmd2 = new RegisterUserCommand(
-                    "emailUser2", "same@test.com", "P@ss1", "P@ss1", Role.USER);
+                    "emailUser2", "same@test.com", "P@ss1", "P@ss1");
 
             assertThatThrownBy(() -> userService.register(cmd2))
                     .isInstanceOf(com.rzodeczko.domain.exception.EmailAlreadyExistsException.class);
@@ -276,7 +297,7 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         @DisplayName("verifyCredentials should reject inactive account")
         void shouldRejectInactiveAccount() {
             var cmd = new RegisterUserCommand(
-                    "inactiveUser", "inactive@test.com", "P@ss1", "P@ss1", Role.USER);
+                    "inactiveUser", "inactive@test.com", "P@ss1", "P@ss1");
             userService.register(cmd);
 
             assertThatThrownBy(() ->

@@ -21,10 +21,10 @@ public interface UserService {
     // Resend code: DELETE old code → INSERT new → email
     String resendActivationCode(String email);
 
-    // Step 2/3 password reset: code verification → returns email (for use in step 3)
+    // Step 2/3 password reset: code verification → generates one-time reset token (UUID, 5 min TTL)
     String getPasswordResetPermission(String code);
 
-    // Step 3/3 password reset: password verification → UPDATE password
+    // Step 3/3 password reset: reset token verification → UPDATE password → DELETE token
     String resetPassword(ResetPasswordCommand command);
 
     // MFA Setup: generate TOTP secret → save → return QR URL

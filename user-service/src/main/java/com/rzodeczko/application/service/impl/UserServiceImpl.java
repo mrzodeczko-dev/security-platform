@@ -11,12 +11,17 @@ import com.rzodeczko.application.service.UserService;
 import com.rzodeczko.domain.exception.*;
 import com.rzodeczko.domain.model.Role;
 import com.rzodeczko.domain.model.User;
+import com.rzodeczko.domain.model.VerificationCode;
 import com.rzodeczko.domain.repository.UserRepository;
 import com.rzodeczko.domain.repository.VerificationCodeRepository;
 
+import java.time.Instant;
 import java.util.UUID;
 
 public class UserServiceImpl implements UserService {
+
+    // Reset token validity: 5 minutes
+    private static final long RESET_TOKEN_TTL_MS = 5 * 60 * 1000;
 
     private final UserRepository userRepository;
     private final VerificationCodeRepository verificationCodeRepository;
@@ -116,30 +121,48 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new UserNotFoundException(vc.getUserId()));
 
         if (!user.isEnabled()) {
-            // Nie mozna resetowac hasla nieaktywnego konta
             verificationCodeRepository.delete(vc);
             throw new UserNotActivatedException(user.getUsername());
         }
 
         verificationCodeRepository.delete(vc);
-        return user.getEmail();
+
+        // Generate one-time reset token (UUID) with short TTL
+        var resetToken = UUID.randomUUID().toString();
+        var expiresAt = Instant.now().toEpochMilli() + RESET_TOKEN_TTL_MS;
+        verificationCodeRepository.save(new VerificationCode(resetToken, expiresAt, user.getId()));
+
+        return resetToken;
     }
 
     @Override
     public String resetPassword(ResetPasswordCommand command) {
+        // Verify one-time reset token
+        var vc = verificationCodeRepository
+                .findByCode(command.resetToken())
+                .orElseThrow(VerificationCodeNotFoundException::new);
+
+        if (vc.isExpired()) {
+            verificationCodeRepository.delete(vc);
+            throw new VerificationCodeExpiredException();
+        }
+
         if (!command.password().equals(command.passwordConfirmation())) {
             throw new PasswordMismatchException();
         }
 
         var user = userRepository
-                .findByEmail(command.email())
-                .orElseThrow(() -> new UserNotFoundException(command.email()));
+                .findById(vc.getUserId())
+                .orElseThrow(() -> new UserNotFoundException(vc.getUserId()));
 
         if (!user.isEnabled()) {
+            verificationCodeRepository.delete(vc);
             throw new UserNotActivatedException(user.getUsername());
         }
 
         user.updatePassword(passwordEncoder.encode(command.password()));
+        verificationCodeRepository.delete(vc);
+
         return userRepository
                 .save(user)
                 .getUsername();
