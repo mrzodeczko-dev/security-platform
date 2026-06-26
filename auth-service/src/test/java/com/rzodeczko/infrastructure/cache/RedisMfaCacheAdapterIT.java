@@ -75,4 +75,29 @@ class RedisMfaCacheAdapterIT extends AbstractRedisIntegrationTest {
         assertThat(result).isPresent();
         assertThat(result.get().userId()).isEqualTo(id);
     }
+
+    // --- MFA Session (mfaId binding) ---
+
+    @Test
+    void storeMfaSession_thenGetMfaSession_returnsUsername() {
+        cache.storeMfaSession("mfa-123", "john");
+
+        var result = cache.getMfaSession("mfa-123");
+
+        assertThat(result).isPresent().contains("john");
+    }
+
+    @Test
+    void getMfaSession_missingKey_returnsEmpty() {
+        assertThat(cache.getMfaSession("nonexistent-mfa")).isEmpty();
+    }
+
+    @Test
+    void deleteMfaSession_removesEntry() {
+        cache.storeMfaSession("mfa-456", "alice");
+
+        cache.deleteMfaSession("mfa-456");
+
+        assertThat(cache.getMfaSession("mfa-456")).isEmpty();
+    }
 }
