@@ -18,8 +18,8 @@ services:
       --collation-server=utf8mb4_unicode_ci
       --innodb-buffer-pool-size=${USER_SERVICE_MYSQL_INNODB_BUFFER_POOL_SIZE}
       --max-connections=${USER_SERVICE_MYSQL_MAX_CONNECTIONS}
-    ports:
-      - '${USER_SERVICE_MYSQL_DB_PORT}:3306'
+    expose:
+      - "3306"
     deploy:
       resources:
         limits:
@@ -86,8 +86,8 @@ services:
   user-service:
     image: mrzodeczko/users-service-security:2.0.0
     restart: on-failure:5
-    ports:
-      - "${USER_SERVICE_PORT}:8083"
+    expose:
+      - "8083"
     depends_on:
       user-mysql:
         condition: service_healthy
@@ -126,8 +126,8 @@ services:
   auth-service:
     image: mrzodeczko/auth-service-security:2.0.0
     restart: on-failure:5
-    ports:
-      - "${AUTH_SERVICE_PORT}:8084"
+    expose:
+      - "8084"
     depends_on:
       user-service:
         condition: service_healthy
