@@ -1,9 +1,7 @@
 package com.rzodeczko.presentation.dto.request;
 
-import com.rzodeczko.domain.model.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record RegisterUserRequestDto(
@@ -19,9 +17,6 @@ public record RegisterUserRequestDto(
         String password,
 
         @NotBlank(message = "Password confirmation cannot be blank")
-        String passwordConfirmation,
-
-        @NotNull(message = "Role cannot be null")
-        Role role
+        String passwordConfirmation
 ) {
 }
