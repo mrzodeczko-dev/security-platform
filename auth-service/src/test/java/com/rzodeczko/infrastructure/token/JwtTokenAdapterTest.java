@@ -60,7 +60,7 @@ class JwtTokenAdapterTest {
     }
 
     @Test
-    void parseRefreshToken_returnsRefreshType() {
+    void parseRefreshToken_returnsRefreshTypeWithJti() {
         var pair = adapter.generate(userId, "john", "USER");
 
         var info = adapter.parse(pair.refreshToken());
@@ -68,6 +68,27 @@ class JwtTokenAdapterTest {
         assertThat(info.type()).isEqualTo(TokenType.REFRESH);
         assertThat(info.userId()).isEqualTo(userId);
         assertThat(info.username()).isEqualTo("john");
+        assertThat(info.jti()).isNotBlank();
+    }
+
+    @Test
+    void parseAccessToken_hasNoJti() {
+        var pair = adapter.generate(userId, "john", "USER");
+
+        var info = adapter.parse(pair.accessToken());
+
+        assertThat(info.jti()).isNull();
+    }
+
+    @Test
+    void generate_producesUniqueJtiPerRefreshToken() {
+        var pair1 = adapter.generate(userId, "john", "USER");
+        var pair2 = adapter.generate(userId, "john", "USER");
+
+        var jti1 = adapter.parse(pair1.refreshToken()).jti();
+        var jti2 = adapter.parse(pair2.refreshToken()).jti();
+
+        assertThat(jti1).isNotEqualTo(jti2);
     }
 
     @Test

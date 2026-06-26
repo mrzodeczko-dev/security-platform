@@ -39,13 +39,13 @@ Auth Service is a production-ready backend responsible for authenticating users 
 
 ### Login with MFA
 
-4. User Service returns `mfaRequired: true` — Auth Service fetches the TOTP secret via `POST /internal/users/mfa`, caches it in Redis (TTL: 60 s), and returns `{ mfaRequired: true, username }` to the client
-5. Client calls `POST /auth/mfa` with `username` and TOTP `code` — Auth Service reads the cached secret from Redis, verifies the code using Google Authenticator, then generates and returns the token pair
+4. User Service returns `mfaRequired: true` — Auth Service generates a unique `mfaId`, binds it to the username in Redis, fetches the TOTP secret via `POST /internal/users/mfa`, caches it in Redis (TTL: 60 s), and returns `{ mfaRequired: true, mfaId, usernameForMfa }` to the client
+5. Client calls `POST /auth/mfa` with `mfaId` and TOTP `code` — Auth Service resolves the username from the `mfaId` session in Redis, reads the cached TOTP secret, verifies the code using Google Authenticator, then generates and returns the token pair. The `mfaId` session is deleted after successful verification (one-time use)
 
 ### Token Refresh & Logout
 
-6. Client calls `POST /auth/refresh` — Auth Service reads the `refresh-token` cookie, validates the JWT signature and claims, and issues a new token pair
-7. Client calls `POST /auth/logout` — Auth Service immediately expires the `refresh-token` cookie (Max-Age: 0)
+6. Client calls `POST /auth/refresh` — Auth Service reads the `refresh-token` cookie, validates the JWT signature and claims, verifies the token's JTI exists in Redis (not revoked), performs **token rotation** (revokes the old JTI, stores the new one), and issues a new token pair
+7. Client calls `POST /auth/logout` — Auth Service reads the `refresh-token` cookie, revokes the token's JTI in Redis (server-side invalidation), and expires the cookie (Max-Age: 0)
 
 ```mermaid
 sequenceDiagram
@@ -60,31 +60,42 @@ sequenceDiagram
     US-->>AS: 200 { userId, username, role, mfaRequired }
 
     alt mfaRequired = false
-        AS->>AS: generate TokenPair (JWT)
+        AS->>AS: generate TokenPair (JWT with JTI)
+        AS->>R: store refresh token JTI (TTL = token expiry)
         AS-->>C: 201 { mfaRequired: false, accessToken } + refresh-token cookie
     else mfaRequired = true
+        AS->>AS: generate mfaId (UUID)
+        AS->>R: store mfa-session:mfaId → username (TTL: 60 s)
         AS->>US: POST /internal/users/mfa (X-Internal-Secret)
         US-->>AS: 200 { userId, username, role, mfaSecret }
         AS->>R: cache mfaSecret by username (TTL: 60 s)
-        AS-->>C: 200 { mfaRequired: true, username }
+        AS-->>C: 200 { mfaRequired: true, mfaId, usernameForMfa }
     end
 
     Note over C,R: MFA verification flow
-    C->>AS: POST /auth/mfa { username, code }
+    C->>AS: POST /auth/mfa { mfaId, code }
+    AS->>R: GET username by mfa-session:mfaId
+    R-->>AS: username
     AS->>R: GET mfaSecret by username
     R-->>AS: mfaSecret
     AS->>AS: verify TOTP code (GoogleAuth)
-    AS->>AS: generate TokenPair (JWT)
+    AS->>R: DELETE mfa-session:mfaId (one-time use)
+    AS->>AS: generate TokenPair (JWT with JTI)
+    AS->>R: store refresh token JTI
     AS-->>C: 201 { accessToken } + refresh-token cookie
 
-    Note over C,AS: Token refresh
+    Note over C,AS: Token refresh (with rotation)
     C->>AS: POST /auth/refresh (refresh-token cookie)
-    AS->>AS: validate JWT, extract claims
-    AS->>AS: generate new TokenPair
+    AS->>AS: validate JWT, extract claims + JTI
+    AS->>R: verify JTI exists (not revoked)
+    AS->>R: DELETE old JTI (rotation)
+    AS->>AS: generate new TokenPair (new JTI)
+    AS->>R: store new JTI
     AS-->>C: 201 { accessToken } + new refresh-token cookie
 
-    Note over C,AS: Logout
-    C->>AS: POST /auth/logout
+    Note over C,AS: Logout (server-side revocation)
+    C->>AS: POST /auth/logout (refresh-token cookie)
+    AS->>R: DELETE JTI (revoke token)
     AS-->>C: 200 { "Logged out successfully" } + expired cookie (Max-Age: 0)
 ```
 
@@ -103,7 +114,7 @@ sequenceDiagram
 | `POST` | `/auth/login` | Authenticate with username and password | `LoginRequestDto` | `200 OK` (MFA required) / `201 Created` | `400`, `401` |
 | `POST` | `/auth/mfa` | Verify TOTP code and complete login | `VerifyMfaRequestDto` | `201 Created` | `400`, `401` |
 | `POST` | `/auth/refresh` | Issue a new access token using refresh cookie | — (cookie) | `201 Created` | `400`, `401` |
-| `POST` | `/auth/logout` | Invalidate the refresh token cookie | — | `200 OK` | — |
+| `POST` | `/auth/logout` | Revoke refresh token (Redis) and expire cookie | — (cookie, optional) | `200 OK` | — |
 
 ### Health Endpoints
 
@@ -126,13 +137,13 @@ curl -X POST http://localhost:8084/auth/login \
 curl -X POST http://localhost:8084/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username": "john", "password": "Secret123!"}'
-# Response: { "mfaRequired": true, "username": "john" }
+# Response: { "mfaRequired": true, "mfaId": "abc-123-...", "usernameForMfa": "john" }
 
 # Login (MFA required) — step 2
 curl -X POST http://localhost:8084/auth/mfa \
   -H "Content-Type: application/json" \
   -c cookies.txt \
-  -d '{"username": "john", "code": "482910"}'
+  -d '{"mfaId": "abc-123-...", "code": 482910}'
 
 # Refresh access token
 curl -X POST http://localhost:8084/auth/refresh \
@@ -236,6 +247,7 @@ graph LR
             MCP[MfaCachePort]
             MVP[MfaVerificationPort]
             UVP[UserVerificationPort]
+            RTP[RefreshTokenPort]
         end
     end
 
@@ -247,6 +259,7 @@ graph LR
         subgraph ADAPTERS["Adapters"]
             JTA[JwtTokenAdapter]
             RCA[RedisMfaCacheAdapter]
+            RRA[RedisRefreshTokenAdapter]
             GMA[GoogleAuthMfaVerificationAdapter]
             USA[UserServiceAdapter]
         end
@@ -259,26 +272,28 @@ graph LR
 
     C --> AC & HC
     AC & HC --> AUS
-    AUS --> TP & MCP & MVP & UVP
+    AUS --> TP & MCP & MVP & UVP & RTP
     TP --> JTA
     MCP --> RCA --> R
+    RTP --> RRA --> R
     MVP --> GMA
     UVP --> USA --> US
 
     class C,AC,HC presentation
     class AUS application
-    class TP,MCP,MVP,UVP port
+    class TP,MCP,MVP,UVP,RTP port
     class M domain
-    class JTA,RCA,GMA,USA infra
+    class JTA,RCA,RRA,GMA,USA infra
     class R,US external
 ```
 
 **Technical Highlights:**
 
-- **Hexagonal Architecture:** Domain and application layers are completely decoupled from infrastructure — `TokenPort`, `MfaCachePort`, `MfaVerificationPort`, and `UserVerificationPort` define contracts; adapters implement them without leaking infrastructure details into business logic.
-- **JWT Token Pair:** `JwtTokenAdapter` uses JJWT 0.12.5 to issue signed access and refresh tokens. Claims carry `userId`, `username`, and `role`. Refresh tokens are bound to the `/auth/refresh` path via an `HttpOnly` cookie, never exposed to JavaScript.
-- **TOTP MFA:** `GoogleAuthMfaVerificationAdapter` wraps the `googleauth` library to validate 6-digit TOTP codes against secrets stored in User Service. The secret is fetched once per login attempt and cached in Redis with a 60-second TTL (`mfa:secret:<username>`).
-- **Redis MFA Cache:** `RedisMfaCacheAdapter` uses Spring Data Redis with Lettuce connection pooling (max 20 active, max 10 idle). Entries are automatically evicted by TTL — no manual cleanup required.
+- **Hexagonal Architecture:** Domain and application layers are completely decoupled from infrastructure — `TokenPort`, `MfaCachePort`, `MfaVerificationPort`, `UserVerificationPort`, and `RefreshTokenPort` define contracts; adapters implement them without leaking infrastructure details into business logic.
+- **JWT Token Pair with JTI:** `JwtTokenAdapter` uses JJWT 0.12.5 to issue signed access and refresh tokens. Claims carry `userId`, `username`, and `role`. Refresh tokens include a unique `jti` (JWT ID) claim for server-side binding. Refresh tokens are bound to the `/auth/refresh` path via an `HttpOnly` cookie, never exposed to JavaScript.
+- **Refresh Token Binding & Rotation:** `RedisRefreshTokenAdapter` stores each refresh token's JTI in Redis (key: `refresh-token:{jti}`, TTL = token expiry). On refresh, the old JTI is revoked and a new one is stored (rotation). On logout, the JTI is deleted (server-side revocation). Tokens not found in Redis are rejected with `RefreshTokenRevokedException`.
+- **TOTP MFA with session binding:** `GoogleAuthMfaVerificationAdapter` wraps the `googleauth` library to validate 6-digit TOTP codes against secrets stored in User Service. The secret is fetched once per login attempt and cached in Redis with a 60-second TTL (`mfa:secret:<username>`). MFA verification is bound to a specific login via `mfaId` — a UUID stored in Redis (`mfa-session:{mfaId}` → username), deleted after one-time use.
+- **Redis Cache:** `RedisMfaCacheAdapter` and `RedisRefreshTokenAdapter` use Spring Data Redis with Lettuce connection pooling (max 20 active, max 10 idle). Entries are automatically evicted by TTL — no manual cleanup required.
 - **Stateless HTTP Client:** `UserServiceAdapter` uses Spring `RestClient` to call User Service. Authentication uses a shared `INTERNAL_SECRET` header — the same constant-time check as on the User Service side prevents timing attacks.
 - **Virtual Threads + container-aware JVM:** `spring.threads.virtual.enabled=true` with `-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC`.
 
@@ -335,29 +350,66 @@ Docker must be running — Testcontainers starts a `redis:8.2-alpine` container 
 
 ### Test Classes
 
-#### `AuthControllerIT` — 13 tests
+#### `AuthServiceImplTest` — 12 tests
+
+Unit test (`@ExtendWith(MockitoExtension.class)`) covering all service methods with mocked ports.
+
+| Test | Scenario |
+|------|----------|
+| `login_withoutMfa_returnsTokenPairAndStoresRefreshToken` | Happy path — tokens generated, JTI stored in Redis |
+| `login_withMfaRequired_returnsMfaIdAndFlag_andSkipsTokenGeneration` | MFA path — mfaId generated, no token/refresh token stored |
+| `verifyMfa_validMfaId_cacheHit_verifiesAndStoresRefreshToken` | MFA happy path — TOTP verified, JTI stored |
+| `verifyMfa_validMfaId_cacheMiss_fetchesFromUserServiceAndCaches` | Cache miss fallback — MFA data fetched from User Service |
+| `verifyMfa_invalidMfaId_throwsMfaSessionNotFoundException` | Invalid mfaId — 401 |
+| `verifyMfa_validMfaId_invalidCode_throwsMfaAuthorizationFailedException` | Wrong TOTP code — 401 |
+| `refresh_validRefreshToken_rotatesAndReturnsNewTokenPair` | Rotation — old JTI deleted, new JTI stored |
+| `refresh_revokedToken_throwsRefreshTokenRevokedException` | Revoked token (JTI missing) — 401 |
+| `refresh_accessTokenPassedAsRefresh_throwsInvalidTokenException` | Wrong token type — 401 |
+| `refresh_malformedToken_throwsInvalidTokenException` | Garbage token — 401 |
+| `logout_validToken_deletesRefreshTokenFromStore` | Logout — JTI deleted from Redis |
+| `logout_expiredOrInvalidToken_doesNotThrow` | Expired token on logout — silently ignored |
+
+#### `JwtTokenAdapterTest` — 8 tests
+
+Unit test for JWT generation and parsing.
+
+| Test | Scenario |
+|------|----------|
+| `generate_producesNonBlankDistinctTokens` | Access and refresh tokens are non-blank and different |
+| `parseAccessToken_returnsCorrectClaims` | Access token claims: userId, username, role, type=ACCESS |
+| `parseRefreshToken_returnsRefreshTypeWithJti` | Refresh token: type=REFRESH, JTI is present |
+| `parseAccessToken_hasNoJti` | Access token has no JTI (null) |
+| `generate_producesUniqueJtiPerRefreshToken` | Each generation produces a unique JTI |
+| `parse_garbageString_throwsInvalidTokenException` | Malformed JWT — exception |
+| `parse_wrongSignature_throwsInvalidTokenException` | Wrong key — exception |
+| `parse_expiredToken_throwsInvalidTokenException` | Expired JWT — exception |
+
+#### `AuthControllerIT` — 14 tests
 
 Full-stack Spring MVC integration test (`@SpringBootTest` + `@AutoConfigureMockMvc`). Covers all four endpoints with a real Spring context, real Redis, and WireMock for the User Service.
 
 | Test | Scenario |
 |------|----------|
 | `login_noMfa_returns201WithAccessTokenAndRefreshCookie` | Happy path — no MFA: access token in body, HttpOnly refresh cookie set |
-| `login_mfaRequired_returns200WithMfaFlag` | MFA path — service returns `mfaRequired: true` with username, no token issued |
+| `login_mfaRequired_returns200WithMfaIdAndFlag` | MFA path — returns `mfaRequired: true` with `mfaId`, no token issued |
 | `login_blankUsername_returns400` | Bean Validation — blank username rejected |
 | `login_blankPassword_returns400` | Bean Validation — blank password rejected |
 | `login_userServiceReturns401_propagates401` | Upstream error — 401 from User Service propagated as 401 |
-| `mfa_validCode_returns201WithAccessTokenAndCookie` | MFA happy path — correct TOTP code issues full token pair |
-| `mfa_invalidCode_returns401` | MFA failure — wrong TOTP code returns 401 with error body |
+| `mfa_validMfaIdAndCode_returns201WithAccessTokenAndCookie` | MFA happy path — correct mfaId + TOTP code issues full token pair |
+| `mfa_validMfaId_invalidCode_returns401` | MFA failure — wrong TOTP code returns 401 |
+| `mfa_invalidMfaId_returns401` | Invalid mfaId (not in Redis) — 401 |
 | `mfa_codeOutOfRange_returns400` | Bean Validation — code below 100 000 rejected |
-| `mfa_userNotInCacheAndUserServiceReturns404_propagates404` | Cache miss fallback — service calls User Service; 404 response propagated |
-| `refresh_validCookie_returns201WithNewToken` | Token refresh — valid refresh cookie issues new access token |
+| `mfa_validMfaId_cacheMiss_fetchesFromUserService` | Cache miss — fetches MFA data from User Service via WireMock |
+| `refresh_validCookie_returns201WithNewToken` | Token rotation — valid cookie + JTI in Redis → new token pair, old JTI revoked |
+| `refresh_revokedToken_returns401` | JTI not in Redis (revoked) — 401 |
 | `refresh_noCookie_returns400` | Missing cookie — `MissingRequestCookieException` handled as 400 |
 | `refresh_invalidToken_returns401` | Invalid JWT in cookie — 401 |
-| `logout_returns200AndExpiresRefreshCookie` | Logout — `refresh-token` cookie Max-Age set to 0 |
+| `logout_withCookie_returns200AndRevokesToken` | Logout with cookie — JTI revoked in Redis, cookie expired |
+| `logout_withoutCookie_returns200` | Logout without cookie — still returns 200 |
 
-#### `RedisMfaCacheAdapterIT` — 5 tests
+#### `RedisMfaCacheAdapterIT` — 8 tests
 
-Infrastructure test against real Redis (no WireMock, no Spring MVC). Extends `AbstractRedisIntegrationTest` directly.
+Infrastructure test against real Redis. Extends `AbstractRedisIntegrationTest` directly.
 
 | Test | Scenario |
 |------|----------|
@@ -366,6 +418,20 @@ Infrastructure test against real Redis (no WireMock, no Spring MVC). Extends `Ab
 | `invalidate_removesEntry` | Invalidation — entry deleted from Redis |
 | `put_overwritesExistingEntry` | Second `put` for the same key replaces the previous value |
 | `get_preservesUuid` | UUID is correctly serialized and deserialized via Jackson |
+| `storeMfaSession_thenGetMfaSession_returnsUsername` | MFA session binding — mfaId → username stored and retrieved |
+| `getMfaSession_missingKey_returnsEmpty` | Missing mfaId — returns empty |
+| `deleteMfaSession_removesEntry` | MFA session deleted from Redis |
+
+#### `RedisRefreshTokenAdapterIT` — 4 tests
+
+Infrastructure test for refresh token storage in Redis.
+
+| Test | Scenario |
+|------|----------|
+| `save_thenExists_returnsTrue` | Store JTI — exists returns true |
+| `exists_missingKey_returnsFalse` | Missing JTI — exists returns false |
+| `delete_removesEntry` | Delete JTI — no longer exists |
+| `save_multipleTokensForSameUser_allExistIndependently` | Multiple JTIs for same user — independent lifecycle |
 
 ---
 
@@ -380,16 +446,19 @@ Infrastructure test against real Redis (no WireMock, no Spring MVC). Extends `Ab
 │   │   ├── main/
 │   │   │   ├── java/com/rzodeczko/
 │   │   │   │   ├── application/
-│   │   │   │   │   ├── command/              # LoginCommand, RefreshTokenCommand,
-│   │   │   │   │   │                         #   VerifyMfaCommand
+│   │   │   │   │   ├── command/              # LoginCommand, LogoutCommand,
+│   │   │   │   │   │                         #   RefreshTokenCommand, VerifyMfaCommand
 │   │   │   │   │   ├── dto/                  # LoginResultDto, TokenPairDto
 │   │   │   │   │   ├── port/                 # MfaCachePort, MfaVerificationPort,
-│   │   │   │   │   │                         #   TokenPort, UserVerificationPort
+│   │   │   │   │   │                         #   RefreshTokenPort, TokenPort,
+│   │   │   │   │   │                         #   UserVerificationPort
 │   │   │   │   │   └── service/              # AuthService (interface),
 │   │   │   │   │                             #   AuthServiceImpl
 │   │   │   │   ├── domain/
 │   │   │   │   │   ├── exception/            # InvalidTokenException,
 │   │   │   │   │   │                         #   MfaAuthorizationFailedException,
+│   │   │   │   │   │                         #   MfaSessionNotFoundException,
+│   │   │   │   │   │                         #   RefreshTokenRevokedException,
 │   │   │   │   │   │                         #   UserServiceUnavailableException
 │   │   │   │   │   └── model/                # MfaData, TokenInfo, TokenPair,
 │   │   │   │   │                             #   TokenType, UserCredentials
@@ -398,7 +467,8 @@ Infrastructure test against real Redis (no WireMock, no Spring MVC). Extends `Ab
 │   │   │   │   │   │   └── dto/              # GetMfaDataRequestDto, MfaDataResponseDto,
 │   │   │   │   │   │                         #   VerifyCredentialsRequestDto,
 │   │   │   │   │   │                         #   VerifyCredentialsResponseDto
-│   │   │   │   │   ├── cache/                # RedisMfaCacheAdapter
+│   │   │   │   │   ├── cache/                # RedisMfaCacheAdapter,
+│   │   │   │   │   │                         #   RedisRefreshTokenAdapter
 │   │   │   │   │   ├── configuration/        # BeanConfiguration
 │   │   │   │   │   │   └── properties/       #   JwtProperties, MfaCacheProperties,
 │   │   │   │   │   │                         #   UserServiceProperties
@@ -416,9 +486,14 @@ Infrastructure test against real Redis (no WireMock, no Spring MVC). Extends `Ab
 │   │   │                                     #   JWT expiry, user-service URL, MFA TTL)
 │   │   └── test/
 │   │       ├── java/com/rzodeczko/
+│   │       │   ├── application/service/impl/
+│   │       │   │   └── AuthServiceImplTest.java         # Unit tests for AuthServiceImpl
 │   │       │   ├── infrastructure/
-│   │       │   │   └── cache/
-│   │       │   │       └── RedisMfaCacheAdapterIT.java  # Redis adapter integration tests
+│   │       │   │   ├── cache/
+│   │       │   │   │   ├── RedisMfaCacheAdapterIT.java  # MFA cache integration tests
+│   │       │   │   │   └── RedisRefreshTokenAdapterIT.java  # Refresh token store tests
+│   │       │   │   └── token/
+│   │       │   │       └── JwtTokenAdapterTest.java     # JWT generation/parsing tests
 │   │       │   ├── presentation/
 │   │       │   │   └── controller/
 │   │       │   │       └── AuthControllerIT.java        # Full-stack endpoint tests
