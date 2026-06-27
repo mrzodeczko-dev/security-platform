@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-user-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: user-service
+    app.kubernetes.io/component: users
+    {{- include "app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.userService.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: user-service
+      {{- include "app.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: user-service
+        app.kubernetes.io/component: users
+        {{- include "app.selectorLabels" . | nindent 8 }}
+    spec:
+      terminationGracePeriodSeconds: 30
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.37
+          command: ['sh', '-c', 'until nc -z {{ .Release.Name }}-mysql {{ .Values.mysql.port }}; do echo waiting for mysql; sleep 2; done']
+      containers:
+        - name: user-service
+          image: {{ .Values.userService.image }}
+          ports:
+            - containerPort: {{ .Values.userService.port }}
+              protocol: TCP
+          env:
+            - name: SPRING_APPLICATION_NAME
+              value: user-service
+            - name: SERVER_PORT
+              value: {{ .Values.userService.port | quote }}
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://{{ .Release.Name }}-mysql:{{ .Values.mysql.port }}/{{ .Values.secrets.mysqlDatabase }}?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: mysql-user
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: mysql-password
+            - name: INTERNAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: internal-secret
+            - name: MAIL_HOST
+              value: {{ .Values.userService.env.mailHost | quote }}
+            - name: MAIL_PORT
+              value: {{ .Values.userService.env.mailPort | quote }}
+            - name: MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: mail-username
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: mail-password
+            - name: MFA_ISSUER
+              value: {{ .Values.userService.env.mfaIssuer | quote }}
+          resources:
+            requests:
+              cpu: {{ .Values.userService.resources.requests.cpu }}
+              memory: {{ .Values.userService.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.userService.resources.limits.cpu }}
+              memory: {{ .Values.userService.resources.limits.memory }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.userService.port }}
+            initialDelaySeconds: {{ .Values.userService.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.userService.probes.liveness.periodSeconds }}
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.userService.port }}
+            initialDelaySeconds: {{ .Values.userService.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.userService.probes.readiness.periodSeconds }}
+            failureThreshold: 3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
