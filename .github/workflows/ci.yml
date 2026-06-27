@@ -3,14 +3,8 @@ name: CI - Unit & Integration Tests
 on:
   push:
     branches: [ main, develop, 'feature/**', 'fix/**' ]
-    paths:
-      - 'services/**'
-      - 'pom.xml'
   pull_request:
     branches: [ main, develop ]
-    paths:
-      - 'services/**'
-      - 'pom.xml'
 
 jobs:
   test:
