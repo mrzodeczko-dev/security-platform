@@ -138,7 +138,7 @@ class UserRegistrationE2ETest extends AbstractE2ETest {
                 .statusCode(anyOf(is(400), is(404)));
     }
 
-    // -- Login after activation ----------------------------─
+    // --- Login after activation ---
 
     @Test
     @Order(20)

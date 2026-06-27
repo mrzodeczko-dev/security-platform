@@ -14,4 +14,6 @@ public interface JpaVerificationCodeRepository extends JpaRepository<Verificatio
 
     @Query("select v from VerificationCodeEntity v join UserEntity u on v.userId = u.id where u.email = :email")
     Optional<VerificationCodeEntity> findByUserEmail(@Param("email") String email);
+
+    void deleteByUserId(UUID userId);
 }

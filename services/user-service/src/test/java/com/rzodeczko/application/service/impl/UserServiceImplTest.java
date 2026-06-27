@@ -909,7 +909,7 @@ class UserServiceImplTest {
             assertThat(result).isNotBlank();
             // result is a UUID reset token, not the email
             assertThat(UUID.fromString(result)).isNotNull();
-            verify(verificationCodeRepository).delete(vc);
+            verify(verificationCodeRepository).deleteByUserId(USER_ID);
             verify(verificationCodeRepository).save(any(VerificationCode.class));
         }
 

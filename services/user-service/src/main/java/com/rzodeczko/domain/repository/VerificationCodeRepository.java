@@ -15,4 +15,6 @@ public interface VerificationCodeRepository {
     Optional<VerificationCode> findByUserEmail(String mail);
 
     void delete(VerificationCode code);
+
+    void deleteByUserId(UUID userId);
 }

@@ -47,13 +47,14 @@ class SecurityE2ETest extends AbstractE2ETest {
         authenticatedClient.login(USERNAME, PASSWORD).then().statusCode(201);
     }
 
-    // ── Unauthenticated access ─────────────────────────────
+    // --- Unauthenticated access ---
 
     @Test
     @Order(1)
     void shouldRejectUnauthenticatedMfaSetup() {
         var unauthClient = new ApiClient();
         unauthClient.given()
+                .when()
                 .post("/users/" + UUID.randomUUID() + "/mfa")
                 .then()
                 .statusCode(401);
@@ -65,12 +66,13 @@ class SecurityE2ETest extends AbstractE2ETest {
         var unauthClient = new ApiClient();
         unauthClient.given()
                 .body(Map.of("newRole", "ADMIN"))
+                .when()
                 .put("/users/" + UUID.randomUUID() + "/role")
                 .then()
                 .statusCode(401);
     }
 
-    // ── Authorization (role-based) ─────────────────────────
+    // --- Authorization (role-based) ---
 
     @Test
     @Order(10)
@@ -78,12 +80,13 @@ class SecurityE2ETest extends AbstractE2ETest {
         // The authenticated user is ROLE_USER, not ADMIN
         authenticatedClient.given()
                 .body(Map.of("newRole", "ADMIN"))
+                .when()
                 .put("/users/" + UUID.randomUUID() + "/role")
                 .then()
                 .statusCode(403);
     }
 
-    // ── JWT tampering ──────────────────────────────────────
+    // --- JWT tampering ---
 
     @Test
     @Order(20)
@@ -92,6 +95,7 @@ class SecurityE2ETest extends AbstractE2ETest {
         tamperedClient.setAccessToken("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoYWNrZXIifQ.tampered_signature");
 
         tamperedClient.given()
+                .when()
                 .post("/users/" + UUID.randomUUID() + "/mfa")
                 .then()
                 .statusCode(401);
@@ -103,18 +107,20 @@ class SecurityE2ETest extends AbstractE2ETest {
         var client = new ApiClient();
         client.given()
                 .header("Authorization", "NotBearer some-random-string")
+                .when()
                 .post("/users/" + UUID.randomUUID() + "/mfa")
                 .then()
                 .statusCode(401);
     }
 
-    // ── Public endpoints remain accessible ─────────────────
+    // --- Public endpoints remain accessible ---
 
     @Test
     @Order(30)
     void shouldAllowPublicHealthCheck() {
         var client = new ApiClient();
         client.given()
+                .when()
                 .get("/actuator/health")
                 .then()
                 .statusCode(200);
@@ -130,7 +136,7 @@ class SecurityE2ETest extends AbstractE2ETest {
                 .statusCode(201);
     }
 
-    // ── Internal endpoints should NOT be accessible via gateway ─
+    // --- Internal endpoints should NOT be accessible via gateway ---
 
     @Test
     @Order(40)
@@ -140,6 +146,7 @@ class SecurityE2ETest extends AbstractE2ETest {
         var client = new ApiClient();
         client.given()
                 .body(Map.of("username", USERNAME, "password", PASSWORD))
+                .when()
                 .post("/internal/users/credentials")
                 .then()
                 .statusCode(anyOf(is(401), is(403), is(404)));

@@ -125,7 +125,8 @@ public class UserServiceImpl implements UserService {
             throw new UserNotActivatedException(user.getUsername());
         }
 
-        verificationCodeRepository.delete(vc);
+        // Delete all existing codes for this user to avoid unique constraint violation
+        verificationCodeRepository.deleteByUserId(user.getId());
 
         // Generate one-time reset token (UUID) with short TTL
         var resetToken = UUID.randomUUID().toString();

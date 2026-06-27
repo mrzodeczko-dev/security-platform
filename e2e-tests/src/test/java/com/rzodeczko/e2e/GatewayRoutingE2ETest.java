@@ -16,6 +16,7 @@ class GatewayRoutingE2ETest extends AbstractE2ETest {
     void shouldReturn404ForUnknownRoute() {
         var client = new ApiClient();
         client.given()
+                .when()
                 .get("/nonexistent/path")
                 .then()
                 .statusCode(anyOf(is(401), is(403), is(404)));
@@ -25,6 +26,7 @@ class GatewayRoutingE2ETest extends AbstractE2ETest {
     void shouldRouteHealthCheckToGateway() {
         var client = new ApiClient();
         client.given()
+                .when()
                 .get("/actuator/health")
                 .then()
                 .statusCode(200)
@@ -38,6 +40,7 @@ class GatewayRoutingE2ETest extends AbstractE2ETest {
         client.given()
                 .contentType("text/plain")
                 .body("not json")
+                .when()
                 .post("/auth/login")
                 .then()
                 .statusCode(anyOf(is(400), is(415)));
@@ -50,6 +53,7 @@ class GatewayRoutingE2ETest extends AbstractE2ETest {
                 .header("Origin", "http://localhost:3000")
                 .header("Access-Control-Request-Method", "POST")
                 .header("Access-Control-Request-Headers", "Content-Type,Authorization")
+                .when()
                 .options("/auth/login")
                 .then()
                 .statusCode(200)
@@ -63,6 +67,7 @@ class GatewayRoutingE2ETest extends AbstractE2ETest {
         var response = client.given()
                 .header("Origin", "http://evil-site.com")
                 .header("Access-Control-Request-Method", "POST")
+                .when()
                 .options("/auth/login");
 
         // Spring Security either blocks (403) or doesn't include CORS headers
