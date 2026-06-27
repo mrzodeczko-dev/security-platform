@@ -1,0 +1,281 @@
+# ============================================================================
+# Security Platform — Helm Values
+# ============================================================================
+
+nameOverride: ""
+fullnameOverride: ""
+
+# ----------------------------------------------------------------------------
+# Global image settings
+# ----------------------------------------------------------------------------
+global:
+  image:
+    registry: docker.io
+    namespace: mrzodeczko
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  # imagePullSecrets:
+  #   - name: dockerhub-credentials
+
+# ============================================================================
+# Application Services
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# User Service
+# ----------------------------------------------------------------------------
+userService:
+  replicaCount: 2
+
+  image:
+    repository: security-platform-user-service
+    # tag: override global.image.tag per service
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+  port: 8083
+
+  env:
+    MAIL_HOST: ""
+    MAIL_PORT: "587"
+    MAIL_USERNAME: ""
+    MFA_ISSUER: "SecurityPlatform"
+
+  probes:
+    liveness:
+      path: /actuator/health/liveness
+      initialDelaySeconds: 40
+      periodSeconds: 15
+    readiness:
+      path: /actuator/health/readiness
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    startup:
+      path: /actuator/health
+      failureThreshold: 30
+      periodSeconds: 5
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# ----------------------------------------------------------------------------
+# Auth Service
+# ----------------------------------------------------------------------------
+authService:
+  replicaCount: 2
+
+  image:
+    repository: security-platform-auth-service
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+  port: 8084
+
+  env:
+    JWT_ACCESS_TOKEN_EXPIRATION_MS: "300000"
+    JWT_REFRESH_TOKEN_EXPIRATION_MS: "3600000"
+
+  probes:
+    liveness:
+      path: /actuator/health/liveness
+      initialDelaySeconds: 40
+      periodSeconds: 15
+    readiness:
+      path: /actuator/health/readiness
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    startup:
+      path: /actuator/health
+      failureThreshold: 30
+      periodSeconds: 5
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# ----------------------------------------------------------------------------
+# API Gateway Service
+# ----------------------------------------------------------------------------
+apiGateway:
+  replicaCount: 2
+
+  image:
+    repository: security-platform-api-gateway-service
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+  port: 8085
+
+  env:
+    RATE_LIMIT_ENABLED: "true"
+    RATE_LIMIT_RPS: "50"
+    RATE_LIMIT_BURST: "100"
+    SPRINGDOC_ENABLED: "false"
+
+  probes:
+    liveness:
+      path: /actuator/health/liveness
+      initialDelaySeconds: 40
+      periodSeconds: 15
+    readiness:
+      path: /actuator/health/readiness
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    startup:
+      path: /actuator/health
+      failureThreshold: 30
+      periodSeconds: 5
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 65
+    targetMemoryUtilizationPercentage: 75
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# ============================================================================
+# Infrastructure
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# MySQL  (disable when using managed RDS / Cloud SQL)
+# ----------------------------------------------------------------------------
+mysql:
+  enabled: true
+
+  image:
+    repository: mysql
+    tag: "9.6.0"
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+  port: 3306
+  database: users_db
+
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 10Gi
+
+  # When mysql.enabled=false, set these to point at external DB:
+  # external:
+  #   host: my-rds-instance.region.rds.amazonaws.com
+  #   port: 3306
+
+# ----------------------------------------------------------------------------
+# Redis  (disable when using managed ElastiCache / Memorystore)
+# ----------------------------------------------------------------------------
+redis:
+  enabled: true
+
+  image:
+    repository: redis
+    tag: "8.2-alpine"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  port: 6379
+
+  # When redis.enabled=false, set these to point at external Redis:
+  # external:
+  #   host: my-redis.region.cache.amazonaws.com
+  #   port: 6379
+
+# ============================================================================
+# Secrets  (override via --set or external secret manager)
+# ============================================================================
+secrets:
+  mysql:
+    rootPassword: "CHANGE_ME"
+    user: "app_user"
+    password: "CHANGE_ME"
+  redis:
+    password: "CHANGE_ME"
+  jwt:
+    secret: "CHANGE_ME_base64_encoded_512bit_key"
+  internalSecret: "CHANGE_ME"
+  mail:
+    password: ""
+
+# ============================================================================
+# Ingress (TLS via cert-manager)
+# ============================================================================
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "20"
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: security-platform-tls
+      hosts:
+        - api.example.com
+
+# ============================================================================
+# Network Policies
+# ============================================================================
+networkPolicy:
+  enabled: true
+
+# ============================================================================
+# Monitoring (Prometheus scrape annotations)
+# ============================================================================
+monitoring:
+  enabled: true
+  path: /actuator/prometheus
+  port: management

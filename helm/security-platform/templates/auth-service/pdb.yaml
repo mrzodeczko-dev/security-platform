@@ -1,0 +1,17 @@
+{{- if .Values.authService.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Release.Name }}-auth-service
+  labels:
+    app.kubernetes.io/name: auth-service
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: auth-service
+    app.kubernetes.io/part-of: security-platform
+spec:
+  minAvailable: {{ .Values.authService.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: auth-service
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
