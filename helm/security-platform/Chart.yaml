@@ -1,0 +1,16 @@
+apiVersion: v2
+name: security-platform
+description: >-
+  Helm chart for Security Platform
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - security
+  - authentication
+  - microservices
+  - jwt
+  - mfa
+maintainers:
+  - name: Michal Rzodeczko
+    email: mrzodeczko.dev@gmail.com
