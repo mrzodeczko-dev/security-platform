@@ -133,8 +133,8 @@ services:
       AUTH_SERVICE_URL: http://auth-service:8084
       USER_SERVICE_URL: http://user-service:8083
       RATE_LIMIT_ENABLED: true
-      RATE_LIMIT_RPS: 10
-      RATE_LIMIT_BURST: 20
+      RATE_LIMIT_RPS: 100
+      RATE_LIMIT_BURST: 100
       REDIS_HOST: auth-redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: e2e-redis-pass

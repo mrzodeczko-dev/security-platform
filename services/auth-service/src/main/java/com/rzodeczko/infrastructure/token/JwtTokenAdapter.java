@@ -26,6 +26,7 @@ public class JwtTokenAdapter implements TokenPort {
     @Override
     public TokenPairDto generate(UUID userId, String username, String role) {
         var now = new Date();
+        var accessJti = UUID.randomUUID().toString();
         var refreshJti = UUID.randomUUID().toString();
         return new TokenPairDto(
                 buildToken(
@@ -35,7 +36,7 @@ public class JwtTokenAdapter implements TokenPort {
                         now,
                         new Date(now.getTime() + jwtProperties.accessTokenExpirationMs()),
                         TokenType.ACCESS,
-                        null
+                        accessJti
                 ),
                 buildToken(
                         userId,
