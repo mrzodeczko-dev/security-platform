@@ -8,9 +8,7 @@
         <version>1.0.0</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
-    <groupId>com.rzodeczko</groupId>
     <artifactId>user-service</artifactId>
-    <version>1.0.0</version>
     <name>user-service</name>
     <description>user-service</description>
     <url/>

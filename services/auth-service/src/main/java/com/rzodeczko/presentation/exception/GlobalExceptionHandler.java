@@ -107,7 +107,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponseDto<Void>> handleUnexpected(Exception e) {
-        log.error("Unexpected error in auth-service", e);
+        log.error("Unexpected error in auth-service: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponseDto.error("Unexpected error occurred"));

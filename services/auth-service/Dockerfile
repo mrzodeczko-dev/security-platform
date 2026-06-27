@@ -39,7 +39,7 @@ ARG BUILD_DATE=unknown
 ARG GIT_COMMIT=unknown
 
 
-LABEL org.opencontainers.image.title="User Service"
+LABEL org.opencontainers.image.title="Auth Service"
 LABEL org.opencontainers.image.version="${APP_VERSION}"
 LABEL org.opencontainers.image.created="${BUILD_DATE}"
 LABEL org.opencontainers.image.revision="${GIT_COMMIT}"
