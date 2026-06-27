@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.6</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.rzodeczko</groupId>
+    <artifactId>security-platform</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    <name>Security Platform</name>
+    <description>Monorepo for Auth Service, User Service, and API Gateway</description>
+
+    <modules>
+        <module>services/api-gateway</module>
+        <module>services/auth-service/auth-service</module>
+        <module>services/user-service/user-service</module>
+    </modules>
+
+    <properties>
+        <java.version>25</java.version>
+
+        <!-- Shared library versions -->
+        <jjwt.version>0.12.5</jjwt.version>
+        <googleauth.version>1.5.0</googleauth.version>
+        <jacoco.version>0.8.14</jacoco.version>
+        <springdoc.version>3.0.3</springdoc.version>
+        <openapi.version>3.0.1</openapi.version>
+
+        <!-- Gateway-specific -->
+        <bucket4j.version>8.18.0</bucket4j.version>
+        <resilience4j.version>2.3.0</resilience4j.version>
+
+        <!-- User-service-specific -->
+        <bcpkix.version>1.78</bcpkix.version>
+
+        <!-- Test -->
+        <testcontainers.version>1.21.3</testcontainers.version>
+        <wiremock.version>3.10.0</wiremock.version>
+    </properties>
+
+    <developers>
+        <developer>
+            <name>Michal Rzodeczko</name>
+            <email>mrzodeczko.dev@gmail.com</email>
+        </developer>
+    </developers>
+</project>

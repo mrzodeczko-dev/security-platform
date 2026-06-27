@@ -3,10 +3,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.6</version>
-        <relativePath/>
+        <groupId>com.rzodeczko</groupId>
+        <artifactId>security-platform</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../../../pom.xml</relativePath>
     </parent>
     <groupId>com.rzodeczko</groupId>
     <artifactId>user-service</artifactId>
@@ -26,13 +26,6 @@
         <tag/>
         <url/>
     </scm>
-    <properties>
-        <java.version>25</java.version>
-        <bcpkix.version>1.78</bcpkix.version>
-        <googleauth.version>1.5.0</googleauth.version>
-        <openapi.version>3.0.1</openapi.version>
-        <jacoco.version>0.8.14</jacoco.version>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
