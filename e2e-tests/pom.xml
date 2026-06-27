@@ -16,7 +16,7 @@
     <description>End-to-end tests for the full Security Platform stack</description>
 
     <properties>
-        <rest-assured.version>5.5.1</rest-assured.version>
+        <rest-assured.version>6.0.0</rest-assured.version>
         <awaitility.version>4.3.0</awaitility.version>
         <!-- Skip by default; run with -Pe2e -->
         <skipTests>true</skipTests>
