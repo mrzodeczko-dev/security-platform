@@ -14,21 +14,31 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * E2E test verifying that the API Gateway enforces rate limiting.
- * The e2e docker-compose sets RPS=100, burst=100.
- * Sending 300 concurrent requests should exceed the bucket capacity
- * and trigger 429 responses for the overflow.
+ * The e2e docker-compose sets RPS=10, burst=10.
+ * We first drain the bucket with a warm-up, then send a burst
+ * that must exceed capacity and trigger 429 responses.
  */
 class RateLimitE2ETest extends AbstractE2ETest {
 
     @Test
     void shouldEnforceRateLimitingOnBurst() throws Exception {
-        int totalRequests = 300;
-        var statusCodes = new CopyOnWriteArrayList<Integer>();
         var baseUrl = E2ETestEnvironment.gatewayBaseUrl();
+
+        // Warm-up: drain the token bucket
+        for (int i = 0; i < 15; i++) {
+            RestAssured.given().baseUri(baseUrl).get("/actuator/health");
+        }
+
+        // Brief pause to let in-flight requests settle
+        Thread.sleep(200);
+
+        // Burst: send 50 requests concurrently — bucket can hold at most ~10
+        int burstSize = 50;
+        var statusCodes = new CopyOnWriteArrayList<Integer>();
 
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var futures = new ArrayList<java.util.concurrent.Future<?>>();
-            for (int i = 0; i < totalRequests; i++) {
+            for (int i = 0; i < burstSize; i++) {
                 futures.add(executor.submit(() -> {
                     var code = RestAssured.given()
                             .baseUri(baseUrl)
@@ -49,6 +59,6 @@ class RateLimitE2ETest extends AbstractE2ETest {
                 .isGreaterThan(0);
 
         // Let the bucket refill before the next test class runs
-        Thread.sleep(1500);
+        Thread.sleep(2000);
     }
 }
