@@ -3,14 +3,9 @@ name: Auth Service
 on:
   push:
     branches: [ main, develop, 'feature/**', 'fix/**' ]
-    paths:
-      - 'services/auth-service/**'
-      - 'pom.xml'
   pull_request:
     branches: [ main, develop ]
-    paths:
-      - 'services/auth-service/**'
-      - 'pom.xml'
+  workflow_dispatch:
 
 jobs:
   test:

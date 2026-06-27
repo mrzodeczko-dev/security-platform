@@ -3,14 +3,9 @@ name: API Gateway Service
 on:
   push:
     branches: [ main, develop, 'feature/**', 'fix/**' ]
-    paths:
-      - 'services/api-gateway-service/**'
-      - 'pom.xml'
   pull_request:
     branches: [ main, develop ]
-    paths:
-      - 'services/api-gateway-service/**'
-      - 'pom.xml'
+  workflow_dispatch:
 
 jobs:
   test:
