@@ -37,10 +37,10 @@ public final class E2ETestEnvironment {
                         Wait.forHttp("/actuator/health")
                                 .forPort(GATEWAY_PORT)
                                 .forStatusCode(200)
-                                .withStartupTimeout(Duration.ofMinutes(5)))
+                                .withStartupTimeout(Duration.ofMinutes(1)))
                 .withExposedService(MAILHOG_SERVICE, MAILHOG_API_PORT,
                         Wait.forListeningPort()
-                                .withStartupTimeout(Duration.ofMinutes(2)))
+                                .withStartupTimeout(Duration.ofMinutes(1)))
                 .withLocalCompose(true);
 
         compose.start();
