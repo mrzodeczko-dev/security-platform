@@ -3,10 +3,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.6</version>
-        <relativePath/>
+        <groupId>com.rzodeczko</groupId>
+        <artifactId>security-platform</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
     <groupId>com.rzodeczko</groupId>
     <artifactId>api-gateway-service</artifactId>
@@ -26,14 +26,6 @@
         <tag/>
         <url/>
     </scm>
-    <properties>
-        <java.version>25</java.version>
-        <jjwt.version>0.12.5</jjwt.version>
-        <bucket4j.version>8.18.0</bucket4j.version>
-        <resilience4j.version>2.3.0</resilience4j.version>
-        <version.jacoco>0.8.14</version.jacoco>
-        <springdoc.version>3.0.3</springdoc.version>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -181,7 +173,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${version.jacoco}</version>
+                <version>${jacoco.version}</version>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
