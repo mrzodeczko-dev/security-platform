@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-gateway-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/component: gateway
+    {{- include "app.labels" . | nindent 4 }}
+data:
+  RATE_LIMIT_ENABLED: {{ .Values.gateway.env.rateLimitEnabled | quote }}
+  RATE_LIMIT_RPS: {{ .Values.gateway.env.rateLimitRps | quote }}
+  RATE_LIMIT_BURST: {{ .Values.gateway.env.rateLimitBurst | quote }}
+  AUTH_SERVICE_URL: "http://{{ .Release.Name }}-auth-service:{{ .Values.authService.port }}"
+  USER_SERVICE_URL: "http://{{ .Release.Name }}-user-service:{{ .Values.userService.port }}"
+  REDIS_HOST: "{{ .Release.Name }}-redis"
+  REDIS_PORT: {{ .Values.redis.port | quote }}

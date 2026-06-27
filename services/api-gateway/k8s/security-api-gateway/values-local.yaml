@@ -1,0 +1,136 @@
+# =============================================================================
+# LOCAL (Minikube) values
+# Usage: helm install sg ./k8s/security-api-gateway -f k8s/security-api-gateway/values-local.yaml
+# =============================================================================
+
+global:
+  namespace: security-gateway-local
+
+gateway:
+  image: mrzodeczko/api-gateway-service:1.0.0
+  replicas: 1
+  port: 8085
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+  env:
+    rateLimitEnabled: "true"
+    rateLimitRps: "20"
+    rateLimitBurst: "40"
+
+  hpa:
+    enabled: false
+
+  probes:
+    liveness:
+      initialDelaySeconds: 90
+      periodSeconds: 15
+    readiness:
+      initialDelaySeconds: 45
+      periodSeconds: 10
+
+authService:
+  image: mrzodeczko/auth-service-security:1.0.0
+  replicas: 1
+  port: 8084
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+  env:
+    accessTokenExpirationMs: "900000"
+    refreshTokenExpirationMs: "604800000"
+
+  probes:
+    liveness:
+      initialDelaySeconds: 90
+      periodSeconds: 15
+    readiness:
+      initialDelaySeconds: 45
+      periodSeconds: 10
+
+userService:
+  image: mrzodeczko/users-service-security:1.0.0
+  replicas: 1
+  port: 8083
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  env:
+    mailHost: ""
+    mailPort: "587"
+    mfaIssuer: "SecurityAppLocal"
+
+  probes:
+    liveness:
+      initialDelaySeconds: 90
+      periodSeconds: 15
+    readiness:
+      initialDelaySeconds: 45
+      periodSeconds: 10
+
+redis:
+  image: redis:8.2-alpine
+  port: 6379
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  config:
+    maxmemory: 64mb
+    maxmemoryPolicy: allkeys-lru
+
+mysql:
+  image: mysql:9.6.0
+  port: 3306
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  storage:
+    size: 1Gi
+    storageClass: standard
+  config:
+    innodbBufferPoolSize: 64M
+    maxConnections: "20"
+
+# Lokalne sekrety — do developmentu, NIE używaj w produkcji
+secrets:
+  jwtSecret: "dGVzdC1zZWNyZXQta2V5LXRoYXQtaXMtYXQtbGVhc3Qtc2l4dHktZm91ci1ieXRlcy1sb25nLWZvci1oczUxMi1hbGdvcml0aG0="
+  redisPassword: "local-redis-pass"
+  mysqlRootPassword: "local-root-pass"
+  mysqlDatabase: "user_service_db"
+  mysqlUser: "app_user"
+  mysqlPassword: "local-mysql-pass"
+  internalSecret: "local-internal-secret"
+  mailUsername: ""
+  mailPassword: ""
+
+ingress:
+  enabled: false
+
+networkPolicy:
+  enabled: false
