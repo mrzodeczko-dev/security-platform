@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * E2E test verifying that the API Gateway enforces rate limiting.
- * The e2e docker-compose sets RPS=50, burst=100.
+ * The e2e docker-compose sets RPS=10, burst=20.
  * Sending a burst well above the limit should trigger 429 responses.
  */
 class RateLimitE2ETest extends AbstractE2ETest {

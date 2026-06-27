@@ -102,12 +102,12 @@ class GatewayServiceImplTest {
         }
 
         @Test
-        @DisplayName("does not forward cookie header")
-        void doesNotForwardCookie() {
+        @DisplayName("forwards cookie header to downstream")
+        void forwardsCookie() {
             when(forwardingPort.forward(any(), any())).thenReturn(stubDownstreamResponse());
 
             var headers = Map.of(
-                    "cookie", List.of("session=abc123; tracking=xyz"),
+                    "cookie", List.of("refresh-token=abc123"),
                     "content-type", List.of("application/json")
             );
             gatewayService.handle(
@@ -117,7 +117,7 @@ class GatewayServiceImplTest {
             var captor = ArgumentCaptor.forClass(GatewayRequest.class);
             verify(forwardingPort).forward(any(), captor.capture());
 
-            assertThat(captor.getValue().headers()).doesNotContainKey("cookie");
+            assertThat(captor.getValue().headers()).containsKey("cookie");
         }
     }
 
