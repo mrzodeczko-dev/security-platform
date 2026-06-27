@@ -126,8 +126,8 @@ services:
       context: .
       dockerfile: services/auth-service/Dockerfile
     restart: on-failure:5
-    expose:
-      - "8084"
+    ports:
+      - "8084:8084"
     depends_on:
       user-service:
         condition: service_healthy
