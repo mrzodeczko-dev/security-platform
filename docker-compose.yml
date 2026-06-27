@@ -167,7 +167,7 @@ services:
   api-gateway-service:
     build:
       context: .
-      dockerfile: services/api-gateway/Dockerfile
+      dockerfile: services/api-gateway-service/Dockerfile
     restart: on-failure:5
     ports:
       - "${API_GATEWAY_SERVICE_PORT:-8085}:8085"

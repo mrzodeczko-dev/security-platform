@@ -19,9 +19,10 @@
     <description>Monorepo for Auth Service, User Service, and API Gateway</description>
 
     <modules>
-        <module>services/api-gateway</module>
+        <module>services/api-gateway-service</module>
         <module>services/auth-service</module>
         <module>services/user-service</module>
+        <module>e2e-tests</module>
     </modules>
 
     <properties>

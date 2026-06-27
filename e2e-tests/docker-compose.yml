@@ -1,0 +1,152 @@
+services:
+  # ------------------------------------------------
+  # MySQL for user-service
+  # ------------------------------------------------
+  user-mysql:
+    image: mysql:9.6.0
+    environment:
+      MYSQL_ROOT_PASSWORD: e2e-root-pass
+      MYSQL_DATABASE: users_db
+      MYSQL_USER: e2e_user
+      MYSQL_PASSWORD: e2e_password
+    command: >
+      --default-time-zone='+00:00'
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    expose:
+      - "3306"
+    healthcheck:
+      test: [ "CMD-SHELL", "mysql -h localhost -u e2e_user -pe2e_password -e \"SELECT 1\"" ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+    networks:
+      - e2e-net
+
+  # ------------------------------------------------
+  # Redis for auth-service + gateway rate-limit
+  # ------------------------------------------------
+  auth-redis:
+    image: redis:8.2-alpine
+    command: >
+      redis-server
+      --bind 0.0.0.0
+      --protected-mode yes
+      --requirepass e2e-redis-pass
+      --appendonly no
+    expose:
+      - "6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "e2e-redis-pass", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - e2e-net
+
+  # ------------------------------------------------
+  # MailHog - SMTP sink (catches activation emails)
+  # ------------------------------------------------
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    expose:
+      - "1025"
+      - "8025"
+    networks:
+      - e2e-net
+
+  # ------------------------------------------------
+  # User Service (pre-built image)
+  # ------------------------------------------------
+  user-service:
+    image: security-platform-user-service
+    expose:
+      - "8083"
+    depends_on:
+      user-mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://user-mysql:3306/users_db?useUnicode=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: e2e_user
+      SPRING_DATASOURCE_PASSWORD: e2e_password
+      MAIL_HOST: mailhog
+      MAIL_USERNAME: noreply@e2e.test
+      MAIL_PASSWORD: ignored
+      MAIL_PORT: 1025
+      INTERNAL_SECRET: e2e-internal-secret
+      MFA_ISSUER: SecurityPlatformE2E
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks:
+      - e2e-net
+
+  # ------------------------------------------------
+  # Auth Service (pre-built image)
+  # ------------------------------------------------
+  auth-service:
+    image: security-platform-auth-service
+    expose:
+      - "8084"
+    depends_on:
+      user-service:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    environment:
+      JWT_SECRET: ZTJlLXRlc3Qtand0LXNlY3JldC1rZXktdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGEyNTY=
+      JWT_ACCESS_TOKEN_EXPIRATION_MS: 300000
+      JWT_REFRESH_TOKEN_EXPIRATION_MS: 3000000
+      USER_SERVICE_URL: http://user-service:8083
+      INTERNAL_SECRET: e2e-internal-secret
+      REDIS_HOST: auth-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: e2e-redis-pass
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks:
+      - e2e-net
+
+  # ------------------------------------------------
+  # API Gateway (pre-built image)
+  # ------------------------------------------------
+  api-gateway-service:
+    image: security-platform-api-gateway-service
+    ports:
+      - "8085"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    environment:
+      JWT_SECRET: ZTJlLXRlc3Qtand0LXNlY3JldC1rZXktdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGEyNTY=
+      AUTH_SERVICE_URL: http://auth-service:8084
+      USER_SERVICE_URL: http://user-service:8083
+      RATE_LIMIT_ENABLED: true
+      RATE_LIMIT_RPS: 50
+      RATE_LIMIT_BURST: 100
+      REDIS_HOST: auth-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: e2e-redis-pass
+      SPRINGDOC_ENABLED: false
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks:
+      - e2e-net
+
+networks:
+  e2e-net:
