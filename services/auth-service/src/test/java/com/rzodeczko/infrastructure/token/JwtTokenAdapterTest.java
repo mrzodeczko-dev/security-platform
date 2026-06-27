@@ -72,23 +72,27 @@ class JwtTokenAdapterTest {
     }
 
     @Test
-    void parseAccessToken_hasNoJti() {
+    void parseAccessToken_hasJti() {
         var pair = adapter.generate(userId, "john", "USER");
 
         var info = adapter.parse(pair.accessToken());
 
-        assertThat(info.jti()).isNull();
+        assertThat(info.jti()).isNotBlank();
     }
 
     @Test
-    void generate_producesUniqueJtiPerRefreshToken() {
+    void generate_producesUniqueJtiPerToken() {
         var pair1 = adapter.generate(userId, "john", "USER");
         var pair2 = adapter.generate(userId, "john", "USER");
 
-        var jti1 = adapter.parse(pair1.refreshToken()).jti();
-        var jti2 = adapter.parse(pair2.refreshToken()).jti();
+        var accessJti1 = adapter.parse(pair1.accessToken()).jti();
+        var accessJti2 = adapter.parse(pair2.accessToken()).jti();
+        var refreshJti1 = adapter.parse(pair1.refreshToken()).jti();
+        var refreshJti2 = adapter.parse(pair2.refreshToken()).jti();
 
-        assertThat(jti1).isNotEqualTo(jti2);
+        assertThat(accessJti1).isNotEqualTo(accessJti2);
+        assertThat(refreshJti1).isNotEqualTo(refreshJti2);
+        assertThat(accessJti1).isNotEqualTo(refreshJti1);
     }
 
     @Test
