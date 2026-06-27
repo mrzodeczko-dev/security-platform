@@ -142,17 +142,17 @@ The gateway proxies all requests to downstream services based on path prefix. It
 # Login (public)
 curl -X POST http://localhost:8085/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"secret"}'
+  -d '{"username":"john","password":"Secret123!"}'
 
 # Access protected endpoint with JWT
 curl http://localhost:8085/users/me \
   -H "Authorization: Bearer eyJhbGciOiJIUzUxMiJ9..."
 
 # Change user role (admin only)
-curl -X PUT http://localhost:8085/users/123/role \
+curl -X PUT http://localhost:8085/users/<userId>/role \
   -H "Authorization: Bearer <admin-token>" \
   -H "Content-Type: application/json" \
-  -d '{"role":"ROLE_ADMIN"}'
+  -d '{"newRole":"ADMIN"}'
 ```
 
 ---

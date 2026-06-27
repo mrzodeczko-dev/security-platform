@@ -196,16 +196,4 @@ services:
           memory: 512M
           cpus: "1.0"
     logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
-    networks:
-      - mr-network
-
-volumes:
-  user-mysql:
-  auth-redis-data:
-
-networks:
-  mr-network:
+      drive
