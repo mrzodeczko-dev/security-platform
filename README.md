@@ -27,9 +27,57 @@ curl http://localhost:8085/actuator/health
 
 ## Architecture
 
-```
-Client → API Gateway (8085) → Auth Service (8084) → Redis
-                             → User Service (8083) → MySQL
+```mermaid
+graph TB
+    Client(["Client"])
+
+    subgraph Docker Network
+        subgraph Gateway["API Gateway :8085"]
+            JWT_FILTER[JWT Filter]
+            RATE_LIMIT[Rate Limiter]
+            RBAC[RBAC Guard]
+            CIRCUIT[Circuit Breaker]
+        end
+
+        subgraph Auth["Auth Service :8084"]
+            LOGIN[Login + MFA]
+            TOKEN[Token Management]
+            LOGOUT[Logout / Revocation]
+        end
+
+        subgraph User["User Service :8083"]
+            REG[Registration + Activation]
+            RESET[Password Reset]
+            MFA_SETUP[MFA Setup]
+            ROLES[Role Management]
+        end
+
+        REDIS[(Redis)]
+        MYSQL[(MySQL)]
+    end
+
+    Client -->|":8085 only exposed port"| Gateway
+
+    JWT_FILTER --> RATE_LIMIT --> RBAC --> CIRCUIT
+
+    Gateway -->|"X-Internal-Secret"| Auth
+    Gateway -->|"X-Internal-Secret"| User
+
+    Auth -->|"MFA sessions
+Refresh tokens (JTI)"| REDIS
+    Gateway -->|"Rate limit buckets"| REDIS
+
+    User --> MYSQL
+
+    Auth -->|"Credential
+verification"| User
+
+    style Client fill:#e1f5fe
+    style Gateway fill:#fff3e0
+    style Auth fill:#f3e5f5
+    style User fill:#e8f5e9
+    style REDIS fill:#ffebee
+    style MYSQL fill:#ffebee
 ```
 
 The gateway is the only publicly exposed service. Auth and User services communicate via internal Docker network with `X-Internal-Secret` header validation.
