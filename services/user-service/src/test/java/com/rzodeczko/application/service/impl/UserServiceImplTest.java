@@ -398,6 +398,7 @@ class UserServiceImplTest {
         void shouldThrow_whenAccountNotActivated() {
             var command = new VerifyCredentialsCommand(USERNAME, PASSWORD);
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(createDisabledUser()));
+            when(passwordEncoder.matches(PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
 
             assertThatThrownBy(() -> userService.verifyCredentials(command))
                     .isInstanceOf(UserNotActivatedException.class);
@@ -892,8 +893,8 @@ class UserServiceImplTest {
     class GetPasswordResetPermissionTests {
 
         @Test
-        @DisplayName("should return email when code is valid and account is active")
-        void shouldReturnEmail_whenCodeValidAndAccountActive() {
+        @DisplayName("should return reset token when code is valid and account is active")
+        void shouldReturnResetToken_whenCodeValidAndAccountActive() {
             String code = "reset-code";
             long futureExpiry = Instant.now().toEpochMilli() + 600_000;
             var vc = new VerificationCode(UUID.randomUUID(), code, futureExpiry, USER_ID);
@@ -901,11 +902,15 @@ class UserServiceImplTest {
 
             when(verificationCodeRepository.findByCode(code)).thenReturn(Optional.of(vc));
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(verificationCodeRepository.save(any(VerificationCode.class))).thenAnswer(inv -> inv.getArgument(0));
 
             String result = userService.getPasswordResetPermission(code);
 
-            assertThat(result).isEqualTo(EMAIL);
+            assertThat(result).isNotBlank();
+            // result is a UUID reset token, not the email
+            assertThat(UUID.fromString(result)).isNotNull();
             verify(verificationCodeRepository).delete(vc);
+            verify(verificationCodeRepository).save(any(VerificationCode.class));
         }
 
         @Test
