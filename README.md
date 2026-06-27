@@ -3,6 +3,10 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.6-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
+[![User Service](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-user-service.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-user-service.yml)
+[![Auth Service](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-auth-service.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-auth-service.yml)
+[![API Gateway](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-api-gateway-service.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-api-gateway-service.yml)
+[![E2E Tests](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/e2e.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/e2e.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Monorepo for a microservice-based authentication and user management platform, built with **Spring Boot 4.0.6**, **Java 25**, and **Hexagonal Architecture**.
