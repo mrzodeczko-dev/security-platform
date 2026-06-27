@@ -2,6 +2,7 @@ package com.rzodeczko.infrastructure.persistence.repository;
 
 import com.rzodeczko.infrastructure.persistence.entity.VerificationCodeEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,5 +16,7 @@ public interface JpaVerificationCodeRepository extends JpaRepository<Verificatio
     @Query("select v from VerificationCodeEntity v join UserEntity u on v.userId = u.id where u.email = :email")
     Optional<VerificationCodeEntity> findByUserEmail(@Param("email") String email);
 
-    void deleteByUserId(UUID userId);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM VerificationCodeEntity v WHERE v.userId = :userId")
+    void deleteByUserId(@Param("userId") UUID userId);
 }
