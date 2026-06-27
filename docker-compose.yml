@@ -49,7 +49,7 @@ services:
       dockerfile: Dockerfile
     restart: on-failure:5
     ports:
-      - "${USER_SERVICE_PORT}:8084"
+      - "${USER_SERVICE_PORT}:8083"
     depends_on:
       user-mysql:
         condition: service_healthy
@@ -62,12 +62,19 @@ services:
       MAIL_PASSWORD: ${USER_SERVICE_MAIL_PASSWORD}
       MAIL_PORT: ${USER_SERVICE_MAIL_PORT}
       INTERNAL_SECRET: ${USER_SERVICE_INTERNAL_SECRET}
+      MFA_ISSUER: ${USER_SERVICE_MFA_ISSUER}
       SPRINGDOC_API_DOCS_SWAGGER_ENABLED: ${SPRINGDOC_API_DOCS_SWAGGER_ENABLED}
     deploy:
       resources:
         limits:
           memory: 768M
           cpus: "1.0"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
