@@ -9,13 +9,18 @@ ARG GIT_COMMIT=unknown
 
 WORKDIR /build
 
-COPY pom.xml .
+# Install parent POM into local repo (non-recursive)
+COPY pom.xml ./parent-pom.xml
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn install -f parent-pom.xml -N -B --no-transfer-progress
+
+# Copy service POM and resolve dependencies
+COPY services/api-gateway/pom.xml .
 
 RUN --mount=type=cache,target=/root/.m2 \
     mvn dependency:go-offline -B --no-transfer-progress
 
-COPY src ./src
-
+COPY services/api-gateway/src ./src
 
 RUN --mount=type=cache,target=/root/.m2 \
     mvn clean package -DskipTests -B --no-transfer-progress
