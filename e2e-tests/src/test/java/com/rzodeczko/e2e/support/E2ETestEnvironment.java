@@ -19,40 +19,45 @@ public final class E2ETestEnvironment {
     private static final int MAILHOG_API_PORT = 8025;
 
     private static ComposeContainer COMPOSE;
-    private static String gatewayBaseUrl;
-    private static String mailhogApiUrl;
+    private static volatile String gatewayBaseUrl;
+    private static volatile String mailhogApiUrl;
 
     private E2ETestEnvironment() {
     }
 
-    public static synchronized void start() {
+    public static void start() {
         if (gatewayBaseUrl != null) {
             return;
         }
+        synchronized (E2ETestEnvironment.class) {
+            if (gatewayBaseUrl != null) {
+                return;
+            }
 
-        var composeFile = resolveComposeFile();
+            var composeFile = resolveComposeFile();
 
-        var compose = new ComposeContainer(composeFile)
-                .withExposedService(GATEWAY_SERVICE, GATEWAY_PORT,
-                        Wait.forHttp("/actuator/health")
-                                .forPort(GATEWAY_PORT)
-                                .forStatusCode(200)
-                                .withStartupTimeout(Duration.ofMinutes(1)))
-                .withExposedService(MAILHOG_SERVICE, MAILHOG_API_PORT,
-                        Wait.forListeningPort()
-                                .withStartupTimeout(Duration.ofMinutes(1)))
-                .withLocalCompose(true);
+            var compose = new ComposeContainer(composeFile)
+                    .withExposedService(GATEWAY_SERVICE, GATEWAY_PORT,
+                            Wait.forHttp("/actuator/health")
+                                    .forPort(GATEWAY_PORT)
+                                    .forStatusCode(200)
+                                    .withStartupTimeout(Duration.ofMinutes(1)))
+                    .withExposedService(MAILHOG_SERVICE, MAILHOG_API_PORT,
+                            Wait.forListeningPort()
+                                    .withStartupTimeout(Duration.ofMinutes(1)))
+                    .withLocalCompose(true);
 
-        compose.start();
-        COMPOSE = compose;
+            compose.start();
+            COMPOSE = compose;
 
-        var gatewayHost = COMPOSE.getServiceHost(GATEWAY_SERVICE, GATEWAY_PORT);
-        var gatewayPort = COMPOSE.getServicePort(GATEWAY_SERVICE, GATEWAY_PORT);
-        gatewayBaseUrl = "http://" + gatewayHost + ":" + gatewayPort;
+            var gatewayHost = COMPOSE.getServiceHost(GATEWAY_SERVICE, GATEWAY_PORT);
+            var gatewayPort = COMPOSE.getServicePort(GATEWAY_SERVICE, GATEWAY_PORT);
+            gatewayBaseUrl = "http://" + gatewayHost + ":" + gatewayPort;
 
-        var mailhogHost = COMPOSE.getServiceHost(MAILHOG_SERVICE, MAILHOG_API_PORT);
-        var mailhogPort = COMPOSE.getServicePort(MAILHOG_SERVICE, MAILHOG_API_PORT);
-        mailhogApiUrl = "http://" + mailhogHost + ":" + mailhogPort;
+            var mailhogHost = COMPOSE.getServiceHost(MAILHOG_SERVICE, MAILHOG_API_PORT);
+            var mailhogPort = COMPOSE.getServicePort(MAILHOG_SERVICE, MAILHOG_API_PORT);
+            mailhogApiUrl = "http://" + mailhogHost + ":" + mailhogPort;
+        }
     }
 
     public static String gatewayBaseUrl() {
