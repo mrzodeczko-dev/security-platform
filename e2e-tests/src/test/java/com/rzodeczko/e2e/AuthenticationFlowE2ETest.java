@@ -46,7 +46,7 @@ class AuthenticationFlowE2ETest extends AbstractE2ETest {
                 .then().statusCode(200);
     }
 
-    // ── Login ──────────────────────────────────────────────
+    // --- Login ---
 
     @Test
     @Order(1)
@@ -78,7 +78,7 @@ class AuthenticationFlowE2ETest extends AbstractE2ETest {
                 .statusCode(anyOf(is(400), is(401), is(404)));
     }
 
-    // ── Token Refresh ──────────────────────────────────────
+    // --- Token Refresh ---
 
     @Test
     @Order(10)
@@ -109,7 +109,7 @@ class AuthenticationFlowE2ETest extends AbstractE2ETest {
                 .statusCode(anyOf(is(400), is(401)));
     }
 
-    // ── Logout ─────────────────────────────────────────────
+    // --- Logout ---
 
     @Test
     @Order(20)
@@ -135,7 +135,7 @@ class AuthenticationFlowE2ETest extends AbstractE2ETest {
                 .statusCode(anyOf(is(400), is(401)));
     }
 
-    // ── Validation ─────────────────────────────────────────
+    // --- Validation ---
 
     @Test
     @Order(30)

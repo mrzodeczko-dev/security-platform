@@ -47,4 +47,10 @@ public class VerificationCodeRepositoryAdapter implements VerificationCodeReposi
     public void delete(VerificationCode code) {
         jpa.deleteById(code.getId());
     }
+
+    @Override
+    @Transactional
+    public void deleteByUserId(UUID userId) {
+        jpa.deleteByUserId(userId);
+    }
 }

@@ -19,7 +19,7 @@ public final class ApiClient {
     public ApiClient() {
     }
 
-    // ── requests ────────────────────────────────────────────
+    // --- requests ---
 
     public RequestSpecification given() {
         var spec = RestAssured.given()
@@ -36,7 +36,7 @@ public final class ApiClient {
         return spec;
     }
 
-    // ── auth helpers ────────────────────────────────────────
+    // --- auth helpers ---
 
     public Response register(String username, String email, String password) {
         return given()
@@ -46,12 +46,14 @@ public final class ApiClient {
                         "password", password,
                         "passwordConfirmation", password
                 ))
+                .when()
                 .post("/users");
     }
 
     public Response login(String username, String password) {
         var response = given()
                 .body(Map.of("username", username, "password", password))
+                .when()
                 .post("/auth/login");
 
         if (response.statusCode() == 201) {
@@ -61,7 +63,7 @@ public final class ApiClient {
     }
 
     public Response refresh() {
-        var response = given().post("/auth/refresh");
+        var response = given().when().post("/auth/refresh");
         if (response.statusCode() == 201) {
             extractTokens(response);
         }
@@ -69,7 +71,7 @@ public final class ApiClient {
     }
 
     public Response logout() {
-        var response = given().post("/auth/logout");
+        var response = given().when().post("/auth/logout");
         if (response.statusCode() == 200) {
             accessToken = null;
             refreshTokenCookie = null;
@@ -77,7 +79,7 @@ public final class ApiClient {
         return response;
     }
 
-    // ── token management ────────────────────────────────────
+    // --- token management ---
 
     public void setAccessToken(String token) {
         this.accessToken = token;

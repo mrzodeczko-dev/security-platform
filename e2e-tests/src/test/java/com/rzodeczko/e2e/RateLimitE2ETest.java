@@ -21,6 +21,7 @@ class RateLimitE2ETest extends AbstractE2ETest {
 
         for (int i = 0; i < totalRequests; i++) {
             var statusCode = client.given()
+                    .when()
                     .get("/actuator/health")
                     .statusCode();
 
