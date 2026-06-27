@@ -52,10 +52,7 @@ public class GatewayServiceImpl implements GatewayPort {
         // Avoid forwarding Authorization, Host, Transfer-Encoding, etc.
         Map<String, List<String>> forwardedHeaders = new HashMap<>();
 
-        // Cookie is intentionally excluded — forwarding all client cookies to downstream
-        // services could leak session tokens or tracking cookies not meant for them.
-        // If downstream needs specific cookies, add a dedicated cookie-forwarding mechanism.
-        var safeHeaders = List.of("content-type", "accept", "cache-control");
+        var safeHeaders = List.of("content-type", "accept", "cache-control", "cookie");
         request.headers().forEach((name, values) -> {
             if (safeHeaders.contains(name.toLowerCase())) {
                 forwardedHeaders.put(name, new ArrayList<>(values));
