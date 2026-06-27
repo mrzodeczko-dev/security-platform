@@ -216,41 +216,4 @@ public class UserServiceImpl implements UserService {
         return userRepository
                 .save(user)
                 .getUsername();
-    }
-
-    @Override
-    public UserCredentialsResultDto verifyCredentials(VerifyCredentialsCommand command) {
-        var user = userRepository
-                .findByUsername(command.username())
-                .orElseThrow(InvalidCredentialsException::new);
-
-        if (!user.isEnabled()) {
-            throw new UserNotActivatedException(user.getUsername());
-        }
-
-        if (!passwordEncoder.matches(command.password(), user.getPassword())) {
-            throw new InvalidCredentialsException();
-        }
-
-        return new UserCredentialsResultDto(
-                user.getId(),
-                user.getUsername(),
-                user.getRole().getName(),
-                user.hasMfaActive()
-        );
-    }
-
-    @Override
-    public MfaDataResultDto getMfaData(GetMfaDataCommand command) {
-        var user = userRepository
-                .findByUsername(command.username())
-                .orElseThrow(() -> new UserNotFoundException(command.username()));
-
-        return new MfaDataResultDto(
-                user.getId(),
-                user.getUsername(),
-                user.getRole().getName(),
-                user.getMfaSecret()
-        );
-    }
-}
+ 

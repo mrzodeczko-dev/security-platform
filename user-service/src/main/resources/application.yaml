@@ -58,10 +58,4 @@ springdoc:
     enabled: ${SPRINGDOC_API_DOCS_SWAGGER_ENABLED:false}
 
 management:
-  endpoints:
-    web:
-      exposure:
-        include: health
-  endpoint:
-    health:
-      show-details: never
+  endpo
