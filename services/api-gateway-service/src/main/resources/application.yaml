@@ -34,6 +34,8 @@ gateway:
     - "POST:/users/password/reset"
     - "GET:/"
     - "GET:/actuator/health"
+    - "GET:/actuator/health/liveness"
+    - "GET:/actuator/health/readiness"
   admin-paths:
     - "PUT:/users/*/role"
   user-paths:
