@@ -9,8 +9,10 @@ import com.rzodeczko.application.port.EventPublisherPort;
 import com.rzodeczko.application.port.MfaSetupPort;
 import com.rzodeczko.application.port.PasswordEncoderPort;
 import com.rzodeczko.domain.exception.*;
+import com.rzodeczko.domain.model.Email;
 import com.rzodeczko.domain.model.Role;
 import com.rzodeczko.domain.model.User;
+import com.rzodeczko.domain.model.Username;
 import com.rzodeczko.domain.model.VerificationCode;
 import com.rzodeczko.domain.repository.UserRepository;
 import com.rzodeczko.domain.repository.VerificationCodeRepository;
@@ -59,15 +61,15 @@ class UserServiceImplTest {
     private static final String ENCODED_PASSWORD = "$2a$10$encodedHash";
 
     private User createEnabledUser() {
-        return new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.USER, true, null, null);
+        return new User(USER_ID, new Username(USERNAME), new Email(EMAIL), ENCODED_PASSWORD, Role.USER, true, null, null);
     }
 
     private User createDisabledUser() {
-        return new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.USER, false, null, null);
+        return new User(USER_ID, new Username(USERNAME), new Email(EMAIL), ENCODED_PASSWORD, Role.USER, false, null, null);
     }
 
     private User createAdminUser() {
-        return new User(USER_ID, "admin", "admin@example.com", ENCODED_PASSWORD, Role.ADMIN, true, null, null);
+        return new User(USER_ID, new Username("admin"), new Email("admin@example.com"), ENCODED_PASSWORD, Role.ADMIN, true, null, null);
     }
 
     // ========================================
@@ -150,7 +152,7 @@ class UserServiceImplTest {
         @DisplayName("should always create user with USER role")
         void shouldCreateUser_withUserRole() {
             var command = new RegisterUserCommand(USERNAME, EMAIL, PASSWORD, PASSWORD);
-            var savedUser = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.USER, false, null, null);
+            var savedUser = new User(USER_ID, new Username(USERNAME), new Email(EMAIL), ENCODED_PASSWORD, Role.USER, false, null, null);
 
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
@@ -420,7 +422,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should return mfaRequired true when user has MFA active")
         void shouldReturnMfaRequired_whenMfaActive() {
-            var user = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.USER, true, "secret", "qrUrl");
+            var user = new User(USER_ID, new Username(USERNAME), new Email(EMAIL), ENCODED_PASSWORD, Role.USER, true, "secret", "qrUrl");
             var command = new VerifyCredentialsCommand(USERNAME, PASSWORD);
 
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
@@ -434,7 +436,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should return correct role for admin user")
         void shouldReturnCorrectRole_forAdmin() {
-            var admin = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.ADMIN, true, null, null);
+            var admin = new User(USER_ID, new Username(USERNAME), new Email(EMAIL), ENCODED_PASSWORD, Role.ADMIN, true, null, null);
             var command = new VerifyCredentialsCommand(USERNAME, PASSWORD);
 
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(admin));
@@ -590,8 +592,8 @@ class UserServiceImplTest {
             UUID adminId = UUID.randomUUID();
             UUID targetId = UUID.randomUUID();
             var command = new ChangeUserRoleCommand(targetId, Role.ADMIN, adminId, "ROLE_ADMIN");
-            var admin = new User(adminId, "admin", "admin@x.com", ENCODED_PASSWORD, Role.ADMIN, true, null, null);
-            var target = new User(targetId, "target", "target@x.com", ENCODED_PASSWORD, Role.USER, true, null, null);
+            var admin = new User(adminId, new Username("admin"), new Email("admin@x.com"), ENCODED_PASSWORD, Role.ADMIN, true, null, null);
+            var target = new User(targetId, new Username("target"), new Email("target@x.com"), ENCODED_PASSWORD, Role.USER, true, null, null);
 
             when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
             when(userRepository.findById(targetId)).thenReturn(Optional.of(target));
@@ -628,7 +630,7 @@ class UserServiceImplTest {
         void shouldThrow_whenRequestingUserNotAdminInDb() {
             UUID userId = UUID.randomUUID();
             var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, userId, "ROLE_ADMIN");
-            var notAdmin = new User(userId, "user", "u@x.com", ENCODED_PASSWORD, Role.USER, true, null, null);
+            var notAdmin = new User(userId, new Username("user"), new Email("u@x.com"), ENCODED_PASSWORD, Role.USER, true, null, null);
 
             when(userRepository.findById(userId)).thenReturn(Optional.of(notAdmin));
 
@@ -641,7 +643,7 @@ class UserServiceImplTest {
         void shouldThrow_whenHeaderRoleDiffersFromDbRole() {
             UUID adminId = UUID.randomUUID();
             var command = new ChangeUserRoleCommand(UUID.randomUUID(), Role.ADMIN, adminId, "ROLE_USER");
-            var admin = new User(adminId, "admin", "admin@x.com", ENCODED_PASSWORD, Role.ADMIN, true, null, null);
+            var admin = new User(adminId, new Username("admin"), new Email("admin@x.com"), ENCODED_PASSWORD, Role.ADMIN, true, null, null);
 
             when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
 
@@ -658,7 +660,7 @@ class UserServiceImplTest {
             UUID adminId = UUID.randomUUID();
             UUID targetId = UUID.randomUUID();
             var command = new ChangeUserRoleCommand(targetId, Role.ADMIN, adminId, "ROLE_ADMIN");
-            var admin = new User(adminId, "admin", "admin@x.com", ENCODED_PASSWORD, Role.ADMIN, true, null, null);
+            var admin = new User(adminId, new Username("admin"), new Email("admin@x.com"), ENCODED_PASSWORD, Role.ADMIN, true, null, null);
 
             when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
             when(userRepository.findById(targetId)).thenReturn(Optional.empty());
@@ -673,8 +675,8 @@ class UserServiceImplTest {
             UUID adminId = UUID.randomUUID();
             UUID targetId = UUID.randomUUID();
             var command = new ChangeUserRoleCommand(targetId, Role.ADMIN, adminId, "ROLE_ADMIN");
-            var admin = new User(adminId, "admin", "admin@x.com", ENCODED_PASSWORD, Role.ADMIN, true, null, null);
-            var target = new User(targetId, "target", "target@x.com", ENCODED_PASSWORD, Role.USER, true, null, null);
+            var admin = new User(adminId, new Username("admin"), new Email("admin@x.com"), ENCODED_PASSWORD, Role.ADMIN, true, null, null);
+            var target = new User(targetId, new Username("target"), new Email("target@x.com"), ENCODED_PASSWORD, Role.USER, true, null, null);
 
             when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
             when(userRepository.findById(targetId)).thenReturn(Optional.of(target));
@@ -714,7 +716,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should throw when MFA is already active")
         void shouldThrow_whenMfaAlreadyActive() {
-            var user = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.USER, true, "secret", "qrUrl");
+            var user = new User(USER_ID, new Username(USERNAME), new Email(EMAIL), ENCODED_PASSWORD, Role.USER, true, "secret", "qrUrl");
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
@@ -753,7 +755,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should not generate credentials when MFA already active")
         void shouldNotGenerateCredentials_whenMfaAlreadyActive() {
-            var user = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.USER, true, "secret", "qrUrl");
+            var user = new User(USER_ID, new Username(USERNAME), new Email(EMAIL), ENCODED_PASSWORD, Role.USER, true, "secret", "qrUrl");
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
@@ -774,7 +776,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("should return MFA data")
         void shouldReturnMfaData() {
-            var user = new User(USER_ID, USERNAME, EMAIL, ENCODED_PASSWORD, Role.USER, true, "mfaSecret", "qrUrl");
+            var user = new User(USER_ID, new Username(USERNAME), new Email(EMAIL), ENCODED_PASSWORD, Role.USER, true, "mfaSecret", "qrUrl");
             var command = new GetMfaDataCommand(USERNAME);
 
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));

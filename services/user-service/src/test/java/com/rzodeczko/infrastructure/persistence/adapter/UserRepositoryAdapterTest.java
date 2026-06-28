@@ -1,7 +1,9 @@
 package com.rzodeczko.infrastructure.persistence.adapter;
 
+import com.rzodeczko.domain.model.Email;
 import com.rzodeczko.domain.model.Role;
 import com.rzodeczko.domain.model.User;
+import com.rzodeczko.domain.model.Username;
 import com.rzodeczko.infrastructure.persistence.entity.UserEntity;
 import com.rzodeczko.infrastructure.persistence.mapper.UserMapper;
 import com.rzodeczko.infrastructure.persistence.repository.JpaUserRepository;
@@ -32,7 +34,7 @@ class UserRepositoryAdapterTest {
     private final UUID userId = UUID.randomUUID();
 
     private User createDomainUser() {
-        return new User(userId, "johndoe", "john@example.com", "encoded-password",
+        return new User(userId, new Username("johndoe"), new Email("john@example.com"), "encoded-password",
                 Role.USER, true, "mfa-secret", "mfa-qr-url");
     }
 

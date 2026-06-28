@@ -1,7 +1,9 @@
 package com.rzodeczko.infrastructure.persistence.mapper;
 
+import com.rzodeczko.domain.model.Email;
 import com.rzodeczko.domain.model.Role;
 import com.rzodeczko.domain.model.User;
+import com.rzodeczko.domain.model.Username;
 import com.rzodeczko.infrastructure.persistence.entity.UserEntity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +20,7 @@ class UserMapperTest {
     @DisplayName("toEntity maps all fields correctly for an enabled admin user with MFA")
     void toEntity_mapsAllFields() {
         UUID id = UUID.randomUUID();
-        User user = new User(id, "admin", "admin@example.com", "hashed-password",
+        User user = new User(id, new Username("admin"), new Email("admin@example.com"), "hashed-password",
                 Role.ADMIN, true, "JBSWY3DPEHPK3PXP", "otpauth://totp/app:admin?secret=JBSWY3DPEHPK3PXP");
 
         UserEntity entity = mapper.toEntity(user);
@@ -45,8 +47,8 @@ class UserMapperTest {
         User user = mapper.toDomain(entity);
 
         assertThat(user.getId()).isEqualTo(id);
-        assertThat(user.getUsername()).isEqualTo("john");
-        assertThat(user.getEmail()).isEqualTo("john@example.com");
+        assertThat(user.getUsername().value()).isEqualTo("john");
+        assertThat(user.getEmail().value()).isEqualTo("john@example.com");
         assertThat(user.getPassword()).isEqualTo("secret");
         assertThat(user.getRole()).isEqualTo(Role.USER);
         assertThat(user.isEnabled()).isFalse();
@@ -57,7 +59,7 @@ class UserMapperTest {
     @Test
     @DisplayName("toEntity handles null MFA fields gracefully")
     void toEntity_handlesNullMfaFields() {
-        User user = new User(UUID.randomUUID(), "user", "user@example.com", "pass",
+        User user = new User(UUID.randomUUID(), new Username("user"), new Email("user@example.com"), "pass",
                 Role.USER, true, null, null);
 
         UserEntity entity = mapper.toEntity(user);
@@ -84,7 +86,7 @@ class UserMapperTest {
     @DisplayName("Roundtrip toDomain(toEntity(user)) preserves all values")
     void roundtrip_preservesAllValues() {
         UUID id = UUID.randomUUID();
-        User original = new User(id, "roundtrip", "roundtrip@example.com", "password123",
+        User original = new User(id, new Username("roundtrip"), new Email("roundtrip@example.com"), "password123",
                 Role.ADMIN, true, "SECRET123", "https://qr.example.com/roundtrip");
 
         User result = mapper.toDomain(mapper.toEntity(original));

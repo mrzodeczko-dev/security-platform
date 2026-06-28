@@ -9,8 +9,10 @@ import com.rzodeczko.application.port.MfaSetupPort;
 import com.rzodeczko.application.port.PasswordEncoderPort;
 import com.rzodeczko.application.service.UserService;
 import com.rzodeczko.domain.exception.*;
+import com.rzodeczko.domain.model.Email;
 import com.rzodeczko.domain.model.Role;
 import com.rzodeczko.domain.model.User;
+import com.rzodeczko.domain.model.Username;
 import com.rzodeczko.domain.model.VerificationCode;
 import com.rzodeczko.domain.repository.UserRepository;
 import com.rzodeczko.domain.repository.VerificationCodeRepository;
@@ -52,8 +54,8 @@ public class UserServiceImpl implements UserService {
         }
 
         var user = new User(
-                command.username(),
-                command.email(),
+                new Username(command.username()),
+                new Email(command.email()),
                 passwordEncoder.encode(command.password()),
                 Role.USER
         );
@@ -62,7 +64,7 @@ public class UserServiceImpl implements UserService {
 
         eventPublisher.publishUserRegistered(new UserRegisteredEvent(savedUser.getId()));
 
-        return savedUser.getUsername();
+        return savedUser.getUsername().value();
     }
 
     @Override
@@ -82,13 +84,13 @@ public class UserServiceImpl implements UserService {
 
         if (user.isEnabled()) {
             verificationCodeRepository.delete(vc);
-            throw new UserAlreadyActivatedException(user.getUsername());
+            throw new UserAlreadyActivatedException(user.getUsername().value());
         }
 
         user.activate();
         userRepository.save(user);
         verificationCodeRepository.delete(vc);
-        return user.getUsername();
+        return user.getUsername().value();
     }
 
     @Override
@@ -102,7 +104,7 @@ public class UserServiceImpl implements UserService {
                 .ifPresent(verificationCodeRepository::delete);
 
         eventPublisher.publishUserRegistered(new UserRegisteredEvent(user.getId()));
-        return user.getUsername();
+        return user.getUsername().value();
     }
 
     @Override
@@ -122,7 +124,7 @@ public class UserServiceImpl implements UserService {
 
         if (!user.isEnabled()) {
             verificationCodeRepository.delete(vc);
-            throw new UserNotActivatedException(user.getUsername());
+            throw new UserNotActivatedException(user.getUsername().value());
         }
 
         // Delete all existing codes for this user to avoid unique constraint violation
@@ -158,7 +160,7 @@ public class UserServiceImpl implements UserService {
 
         if (!user.isEnabled()) {
             verificationCodeRepository.delete(vc);
-            throw new UserNotActivatedException(user.getUsername());
+            throw new UserNotActivatedException(user.getUsername().value());
         }
 
         user.updatePassword(passwordEncoder.encode(command.password()));
@@ -166,7 +168,8 @@ public class UserServiceImpl implements UserService {
 
         return userRepository
                 .save(user)
-                .getUsername();
+                .getUsername()
+                .value();
     }
 
     @Override
@@ -179,7 +182,7 @@ public class UserServiceImpl implements UserService {
             throw new MfaAlreadyActivatedException();
         }
 
-        var mfaResult = mfaSetup.generateCredentials(user.getUsername());
+        var mfaResult = mfaSetup.generateCredentials(user.getUsername().value());
         user.enableMfa(mfaResult.secret(), mfaResult.qrUrl());
         userRepository.save(user);
 
@@ -216,7 +219,8 @@ public class UserServiceImpl implements UserService {
 
         return userRepository
                 .save(user)
-                .getUsername();
+                .getUsername()
+                .value();
     }
 
     @Override
@@ -230,12 +234,12 @@ public class UserServiceImpl implements UserService {
         }
 
         if (!user.isEnabled()) {
-            throw new UserNotActivatedException(user.getUsername());
+            throw new UserNotActivatedException(user.getUsername().value());
         }
 
         return new UserCredentialsResultDto(
                 user.getId(),
-                user.getUsername(),
+                user.getUsername().value(),
                 user.getRole().getName(),
                 user.hasMfaActive()
         );
@@ -249,7 +253,7 @@ public class UserServiceImpl implements UserService {
 
         return new MfaDataResultDto(
                 user.getId(),
-                user.getUsername(),
+                user.getUsername().value(),
                 user.getRole().getName(),
                 user.getMfaSecret()
         );

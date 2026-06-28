@@ -18,10 +18,10 @@ class UserTest {
         @Test
         @DisplayName("should set username, email, password, and role correctly")
         void shouldSetFieldsCorrectly() {
-            User user = new User("john", "john@example.com", "encoded123", Role.USER);
+            User user = new User(new Username("john"), new Email("john@example.com"), "encoded123", Role.USER);
 
-            assertThat(user.getUsername()).isEqualTo("john");
-            assertThat(user.getEmail()).isEqualTo("john@example.com");
+            assertThat(user.getUsername().value()).isEqualTo("john");
+            assertThat(user.getEmail().value()).isEqualTo("john@example.com");
             assertThat(user.getPassword()).isEqualTo("encoded123");
             assertThat(user.getRole()).isEqualTo(Role.USER);
         }
@@ -29,7 +29,7 @@ class UserTest {
         @Test
         @DisplayName("should have enabled set to false by default")
         void shouldBeDisabledByDefault() {
-            User user = new User("john", "john@example.com", "encoded123", Role.USER);
+            User user = new User(new Username("john"), new Email("john@example.com"), "encoded123", Role.USER);
 
             assertThat(user.isEnabled()).isFalse();
         }
@@ -37,7 +37,7 @@ class UserTest {
         @Test
         @DisplayName("should have id set to null")
         void shouldHaveNullId() {
-            User user = new User("john", "john@example.com", "encoded123", Role.USER);
+            User user = new User(new Username("john"), new Email("john@example.com"), "encoded123", Role.USER);
 
             assertThat(user.getId()).isNull();
         }
@@ -51,12 +51,12 @@ class UserTest {
         @DisplayName("should set all fields including id, enabled, mfaSecret, and mfaQrUrl")
         void shouldSetAllFields() {
             UUID id = UUID.randomUUID();
-            User user = new User(id, "jane", "jane@example.com", "pass456",
+            User user = new User(id, new Username("jane"), new Email("jane@example.com"), "pass456",
                     Role.ADMIN, true, "secret123", "https://qr.example.com/code");
 
             assertThat(user.getId()).isEqualTo(id);
-            assertThat(user.getUsername()).isEqualTo("jane");
-            assertThat(user.getEmail()).isEqualTo("jane@example.com");
+            assertThat(user.getUsername().value()).isEqualTo("jane");
+            assertThat(user.getEmail().value()).isEqualTo("jane@example.com");
             assertThat(user.getPassword()).isEqualTo("pass456");
             assertThat(user.getRole()).isEqualTo(Role.ADMIN);
             assertThat(user.isEnabled()).isTrue();
@@ -72,7 +72,7 @@ class UserTest {
         @Test
         @DisplayName("should set enabled to true")
         void shouldEnableUser() {
-            User user = new User("john", "john@example.com", "encoded123", Role.USER);
+            User user = new User(new Username("john"), new Email("john@example.com"), "encoded123", Role.USER);
 
             user.activate();
 
@@ -87,7 +87,7 @@ class UserTest {
         @Test
         @DisplayName("should change the password to the new encoded value")
         void shouldChangePassword() {
-            User user = new User("john", "john@example.com", "oldPassword", Role.USER);
+            User user = new User(new Username("john"), new Email("john@example.com"), "oldPassword", Role.USER);
 
             user.updatePassword("newEncodedPassword");
 
@@ -102,7 +102,7 @@ class UserTest {
         @Test
         @DisplayName("should set mfaSecret and mfaQrUrl")
         void shouldSetMfaFields() {
-            User user = new User("john", "john@example.com", "encoded123", Role.USER);
+            User user = new User(new Username("john"), new Email("john@example.com"), "encoded123", Role.USER);
 
             user.enableMfa("totp-secret", "https://qr.example.com/totp");
 
@@ -116,17 +116,17 @@ class UserTest {
     class HasMfaActive {
 
         @Test
-        @DisplayName("should return false when mfaQrUrl is null")
-        void shouldReturnFalseWhenQrUrlIsNull() {
-            User user = new User("john", "john@example.com", "encoded123", Role.USER);
+        @DisplayName("should return false when mfaSecret is null")
+        void shouldReturnFalseWhenMfaSecretIsNull() {
+            User user = new User(new Username("john"), new Email("john@example.com"), "encoded123", Role.USER);
 
             assertThat(user.hasMfaActive()).isFalse();
         }
 
         @Test
-        @DisplayName("should return true when mfaQrUrl is set")
-        void shouldReturnTrueWhenQrUrlIsSet() {
-            User user = new User("john", "john@example.com", "encoded123", Role.USER);
+        @DisplayName("should return true when mfaSecret is set")
+        void shouldReturnTrueWhenMfaSecretIsSet() {
+            User user = new User(new Username("john"), new Email("john@example.com"), "encoded123", Role.USER);
 
             user.enableMfa("secret", "https://qr.example.com/code");
 
@@ -141,7 +141,7 @@ class UserTest {
         @Test
         @DisplayName("should change role to the new value")
         void shouldChangeRole() {
-            User user = new User("john", "john@example.com", "encoded123", Role.USER);
+            User user = new User(new Username("john"), new Email("john@example.com"), "encoded123", Role.USER);
 
             user.changeRole(Role.ADMIN);
 
@@ -156,7 +156,7 @@ class UserTest {
         @Test
         @DisplayName("should return true when role is ADMIN")
         void shouldReturnTrueForAdmin() {
-            User user = new User("john", "john@example.com", "encoded123", Role.ADMIN);
+            User user = new User(new Username("john"), new Email("john@example.com"), "encoded123", Role.ADMIN);
 
             assertThat(user.isAdmin()).isTrue();
         }
@@ -164,7 +164,7 @@ class UserTest {
         @Test
         @DisplayName("should return false when role is USER")
         void shouldReturnFalseForUser() {
-            User user = new User("john", "john@example.com", "encoded123", Role.USER);
+            User user = new User(new Username("john"), new Email("john@example.com"), "encoded123", Role.USER);
 
             assertThat(user.isAdmin()).isFalse();
         }
