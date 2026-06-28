@@ -57,7 +57,7 @@ public class UserRegistrationEventListener {
         verificationCodeRepository.save(new VerificationCode(code, expiresAt, user.getId()));
 
         emailPort.send(
-                user.getEmail(),
+                user.getEmail().value(),
                 "Activation Code",
                 "Your activation code: %s\nValid for: %d seconds".formatted(
                         code,

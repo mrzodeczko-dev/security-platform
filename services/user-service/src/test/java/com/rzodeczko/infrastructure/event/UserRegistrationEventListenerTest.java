@@ -3,8 +3,10 @@ package com.rzodeczko.infrastructure.event;
 import com.rzodeczko.application.event.UserRegisteredEvent;
 import com.rzodeczko.application.port.EmailPort;
 import com.rzodeczko.domain.exception.UserNotFoundException;
+import com.rzodeczko.domain.model.Email;
 import com.rzodeczko.domain.model.Role;
 import com.rzodeczko.domain.model.User;
+import com.rzodeczko.domain.model.Username;
 import com.rzodeczko.domain.model.VerificationCode;
 import com.rzodeczko.domain.repository.UserRepository;
 import com.rzodeczko.domain.repository.VerificationCodeRepository;
@@ -56,7 +58,7 @@ class UserRegistrationEventListenerTest {
     }
 
     private User createUser() {
-        return new User(userId, "johndoe", "john@example.com", "encoded-pw",
+        return new User(userId, new Username("johndoe"), new Email("john@example.com"), "encoded-pw",
                 Role.USER, false, null, null);
     }
 

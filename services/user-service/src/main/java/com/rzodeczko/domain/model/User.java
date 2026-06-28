@@ -5,8 +5,8 @@ import java.util.UUID;
 public class User {
     private UUID id;
 
-    private final String username;
-    private final String email;
+    private final Username username;
+    private final Email email;
 
     private String password;
 
@@ -17,7 +17,7 @@ public class User {
     private String mfaSecret;
     private String mfaQrUrl;
 
-    public User(String username, String email, String encodedPassword, Role role) {
+    public User(Username username, Email email, String encodedPassword, Role role) {
         this.username = username;
         this.email = email;
         this.password = encodedPassword;
@@ -27,8 +27,8 @@ public class User {
 
     public User(
             UUID id,
-            String username,
-            String email,
+            Username username,
+            Email email,
             String password,
             Role role,
             boolean enabled,
@@ -62,7 +62,7 @@ public class User {
     }
 
     public boolean hasMfaActive() {
-        return this.mfaQrUrl != null;
+        return this.mfaSecret != null;
     }
 
     public void changeRole(Role newRole) {
@@ -77,11 +77,11 @@ public class User {
         return id;
     }
 
-    public String getUsername() {
+    public Username getUsername() {
         return username;
     }
 
-    public String getEmail() {
+    public Email getEmail() {
         return email;
     }
 
