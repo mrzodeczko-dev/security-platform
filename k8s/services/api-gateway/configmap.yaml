@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: security-platform
+  labels:
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/part-of: security-platform
+data:
+  AUTH_SERVICE_URL: "http://auth-service:8084"
+  USER_SERVICE_URL: "http://user-service:8083"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_RPS: "50"
+  RATE_LIMIT_BURST: "100"
+  SPRINGDOC_ENABLED: "false"

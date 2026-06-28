@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+  namespace: security-platform
+  labels:
+    app.kubernetes.io/name: mysql
+    app.kubernetes.io/component: mysql
+    app.kubernetes.io/part-of: security-platform
+data:
+  MYSQL_DATABASE: "users_db"

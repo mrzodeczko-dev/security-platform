@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: security-platform
+  labels:
+    app.kubernetes.io/name: auth-service
+    app.kubernetes.io/part-of: security-platform
+data:
+  USER_SERVICE_URL: "http://user-service:8083"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  JWT_ACCESS_TOKEN_EXPIRATION_MS: "300000"
+  JWT_REFRESH_TOKEN_EXPIRATION_MS: "3600000"
