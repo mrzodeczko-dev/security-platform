@@ -1,13 +1,15 @@
 # Security Platform
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.6-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Java](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![Helm](https://img.shields.io/badge/Helm-v3-blue.svg)](https://helm.sh/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.6-6DB33F.svg?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-25-ED8B00.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik04Ljg1MSAxOC41NnMtLjkxNy41MzQuNjUzLjcxNGMxLjkwMi4yMTggMi44NzQuMTg3IDQuOTY5LS4yMTEgMCAwIC41NTIuMzQ2IDEuMzIxLjY0Ni00LjY5OSAyLjAxMy0xMC42MzMtLjExOC02Ljk0My0xLjE0OU04LjI3NiAxNS45MzNzLTEuMDI4Ljc2Mi41NDIuOTI0YzIuMDMyLjIwOSAzLjYzNi4yMjcgNi40MTMtLjMwOCAwIDAgLjM4NC4zODkuOTg3LjYwMi01LjY3OSAxLjY2MS0xMi4wMDcuMTMtNy45NDItMS4yMThNMTMuMTE2IDExLjQ3NWMxLjE1OCAxLjMzMy0uMzA0IDIuNTMzLS4zMDQgMi41MzNzMi45MzktMS41MTggMS41ODktMy40MThjLTEuMjYxLTEuNzcyLTIuMjI4LTIuNjUyIDMuMDA3LTUuNjg4IDAgMC04LjIxNiAyLjA1MS00LjI5MiA2LjU3M00xOS4zMyAyMC41MDRzLjY3OS41NTktLjc0Ny45OTFjLTIuNzEyLjgyMi0xMS4yODggMS4wNjktMTMuNjY5LjAzMy0uODU2LS4zNzMuNzUtLjg5IDEuMjU0LS45OTguNTI3LS4xMTQuODI4LS4wOTMuODI4LS4wOTMtLjk1My0uNjcxLTYuMTU2IDEuMzE3LTIuNjQzIDEuODg3IDkuNTggMS41NTMgMTcuNDYyLS43IDE0Ljk3Ny0xLjgyTTkuMjkyIDEzLjIxcy00LjM2MiAxLjAzNi0xLjU0NCAxLjQxMmMxLjE4OS4xNTkgMy41NjEuMTIzIDUuNzctLjA2MiAxLjgwNi0uMTUyIDMuNjE4LS40NzcgMy42MTgtLjQ3N3MtLjYzNy4yNzItMS4wOTguNTg3Yy00LjQyOSAxLjE2NS0xMi45ODYuNjIzLTEwLjUyMi0uNTY5IDIuMDgyLTEuMDA2IDMuNzc2LS44OTEgMy43NzYtLjg5MU0xNy4xMTYgMTcuNTg0YzQuNTAzLTIuMzQgMi40MjEtNC41ODkuOTY4LTQuMjg1LS4zNTUuMDc0LS41MTUuMTM4LS41MTUuMTM4cy4xMzItLjIwNy4zODUtLjI5N2MyLjg3NS0xLjAxMSA1LjA4NiAyLjk4MS0uOTI5IDQuNTYyIDAgMCAuMDctLjA2Mi4wOTEtLjExOE0xNC40MDEgMHMyLjQ5NCAyLjQ5NC0yLjM2NSA2LjMzYy0zLjg5NiAzLjA3Ny0uODg5IDQuODMyIDAgNi44MzYtMi4yNzQtMi4wNTMtMy45NDMtMy44NTgtMi44MjQtNS41NCAxLjY0NC0yLjQ2OSA2LjE5Ny0zLjY2NSA1LjE4OS03LjYyNk05LjczNCAyMy45MjRjNC4zMjIuMjc3IDEwLjk1OS0uMTU0IDExLjExNi0yLjE5OCAwIDAtLjMwMi43NzUtMy41NzIgMS4zOTEtMy42ODguNjk0LTguMjM5LjYxMy0xMC45MzcuMTY4IDAgMCAuNTUzLjQ1NyAzLjM5My42MzkiLz48L3N2Zz4K)]()
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-Ready-326CE5.svg?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![Helm](https://img.shields.io/badge/Helm-v3-0F1689.svg?logo=helm&logoColor=white)](https://helm.sh/)
 [![User Service](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-user-service.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-user-service.yml)
 [![Auth Service](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-auth-service.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-auth-service.yml)
 [![API Gateway](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-api-gateway-service.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-api-gateway-service.yml)
 [![E2E Tests](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/e2e.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/e2e.yml)
+[![Docker Publish](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/dockerhub-publish-images.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/dockerhub-publish-images.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Monorepo for a microservice-based authentication and user management platform, built with **Spring Boot 4.0.6**, **Java 25**, and **Hexagonal Architecture**. Production-ready with Helm chart, Prometheus observability, E2E test suite, and automated Docker Hub publishing.
@@ -122,6 +124,31 @@ When `networkPolicy.enabled=true` (default), five NetworkPolicies enforce least-
 
 The chart creates an `nginx` Ingress with cert-manager annotation (`letsencrypt-prod` cluster issuer) for automatic TLS. Configure your domain under `ingress.hosts` and `ingress.tls` in `values.yaml`.
 
+## Cloud & Kubernetes (Plain Manifests)
+
+The `./k8s` directory contains standard Kubernetes manifests (Deployments, Services, Ingress, ConfigMaps, Secrets, HPAs, NetworkPolicies) allowing the stack to be deployed to any Kubernetes cluster without Helm.
+
+To test locally via Minikube or kind:
+
+```bash
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/infrastructure/
+kubectl apply -f k8s/services/user-service/
+kubectl apply -f k8s/services/auth-service/
+kubectl apply -f k8s/services/api-gateway/
+kubectl apply -f k8s/network/
+kubectl apply -f k8s/autoscaling/
+```
+
+Verify:
+
+```bash
+kubectl get pods -n security-platform
+```
+
+> **Note:** Edit `k8s/secrets.yaml` with real credentials before deploying. For production, use a secret manager (e.g. Sealed Secrets, External Secrets Operator).
+
 ### External database / cache
 
 MySQL and Redis are deployed as StatefulSet/Deployment by default. To use managed services (RDS, ElastiCache, Cloud SQL, Memorystore), set `mysql.enabled=false` / `redis.enabled=false` and configure `mysql.external.host` / `redis.external.host` in `values.yaml`.
@@ -140,6 +167,13 @@ security-platform/
 │   └── user-service/                # User lifecycle management
 ├── e2e-tests/                       # End-to-end test suite (docker-compose based)
 │   └── docker-compose.yml           # Test environment (MySQL, Redis, MailHog, 3 services)
+├── k8s/                             # Plain Kubernetes manifests (no Helm required)
+│   ├── namespace.yaml
+│   ├── secrets.yaml
+│   ├── infrastructure/              # MySQL StatefulSet, Redis Deployment
+│   ├── services/                    # Deployment, Service, ConfigMap per service
+│   ├── network/                     # Ingress, NetworkPolicies
+│   └── autoscaling/                 # HorizontalPodAutoscalers
 ├── helm/
 │   └── security-platform/           # Production Helm chart
 │       ├── Chart.yaml
