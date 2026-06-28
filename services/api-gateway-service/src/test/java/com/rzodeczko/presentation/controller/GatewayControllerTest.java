@@ -14,6 +14,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -22,6 +24,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -125,6 +128,22 @@ class GatewayControllerTest {
             verify(gatewayService).handle(captor.capture(), isNull(), isNull(), isNull());
 
             assertThat(captor.getValue().queryString()).isEqualTo("page=2&size=10");
+        }
+
+        @Test
+        @DisplayName("authenticated request extracts userId, username, role from Authentication details")
+        void authenticatedRequestExtractsUserData() throws Exception {
+            when(gatewayService.handle(any(), eq("user-42"), eq("john"), eq("ROLE_USER")))
+                    .thenReturn(new GatewayResponse(200, Map.of(), new byte[0]));
+
+            var auth = new UsernamePasswordAuthenticationToken(
+                    "user-42", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+            auth.setDetails(Map.of("username", "john", "role", "ROLE_USER"));
+
+            mockMvc.perform(get("/users/me").principal(auth))
+                    .andExpect(status().isOk());
+
+            verify(gatewayService).handle(any(), eq("user-42"), eq("john"), eq("ROLE_USER"));
         }
     }
 
