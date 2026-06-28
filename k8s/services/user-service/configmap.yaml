@@ -7,8 +7,7 @@ metadata:
     app.kubernetes.io/name: user-service
     app.kubernetes.io/part-of: security-platform
 data:
-  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/users_db?useUnicode=true&serverTimezone=UTC"
-  USER_SERVICE_URL: "http://user-service:8083"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/users_db?useUnicode=true&useLegacyDatetimeCode=false&serverTimezone=UTC"
   MAIL_HOST: "smtp.gmail.com"
   MAIL_PORT: "587"
   MAIL_USERNAME: ""
