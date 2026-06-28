@@ -43,15 +43,18 @@ spec:
             limits:
               cpu: "1"
               memory: 1Gi
+          startupProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost"]
+            failureThreshold: 30
+            periodSeconds: 10
           livenessProbe:
             exec:
               command: ["mysqladmin", "ping", "-h", "localhost"]
-            initialDelaySeconds: 30
             periodSeconds: 10
           readinessProbe:
             exec:
               command: ["bash", "-c", "mysql -h localhost -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'SELECT 1'"]
-            initialDelaySeconds: 15
             periodSeconds: 5
           volumeMounts:
             - name: data

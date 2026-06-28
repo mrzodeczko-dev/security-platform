@@ -22,20 +22,16 @@ spec:
       containers:
         - name: redis
           image: redis:8.2-alpine
-          command:
-            - redis-server
-            - "--bind"
-            - "0.0.0.0"
-            - "--protected-mode"
-            - "yes"
-            - "--requirepass"
-            - "$(REDIS_PASSWORD)"
-            - "--appendonly"
-            - "yes"
-            - "--maxmemory"
-            - "128mb"
-            - "--maxmemory-policy"
-            - "allkeys-lru"
+          command: ["sh", "-c"]
+          args:
+            - >-
+              redis-server
+              --bind 0.0.0.0
+              --protected-mode yes
+              --requirepass "$REDIS_PASSWORD"
+              --appendonly yes
+              --maxmemory 128mb
+              --maxmemory-policy allkeys-lru
           ports:
             - name: redis
               containerPort: 6379
@@ -50,13 +46,22 @@ spec:
             limits:
               cpu: 500m
               memory: 256Mi
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli --no-auth-warning -a \"$REDIS_PASSWORD\" ping"]
+            failureThreshold: 10
+            periodSeconds: 3
           livenessProbe:
             exec:
-              command: ["redis-cli", "-a", "$(REDIS_PASSWORD)", "ping"]
-            initialDelaySeconds: 10
+              command: ["sh", "-c", "redis-cli --no-auth-warning -a \"$REDIS_PASSWORD\" ping"]
             periodSeconds: 10
           readinessProbe:
             exec:
-              command: ["redis-cli", "-a", "$(REDIS_PASSWORD)", "ping"]
-            initialDelaySeconds: 5
+              command: ["sh", "-c", "redis-cli --no-auth-warning -a \"$REDIS_PASSWORD\" ping"]
             periodSeconds: 5
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          emptyDir: {}
