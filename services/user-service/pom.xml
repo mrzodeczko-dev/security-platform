@@ -172,6 +172,18 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/UserServiceApplication.*</exclude>
+                        <exclude>**/dto/**</exclude>
+                        <exclude>**/command/**</exclude>
+                        <exclude>**/port/**</exclude>
+                        <exclude>**/properties/**</exclude>
+                        <exclude>**/entity/**</exclude>
+                        <exclude>**/repository/Jpa*</exclude>
+                        <exclude>**/event/UserRegisteredEvent.*</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
@@ -200,6 +212,7 @@
                                         <limit>
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
