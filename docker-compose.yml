@@ -80,9 +80,10 @@ services:
   # USER SERVICE
   # --------------------------------------------------------------------------------------------------------------------
   user-service:
-    build:
-      context: .
-      dockerfile: services/user-service/Dockerfile
+#    build:
+#      context: .
+#      dockerfile: services/user-service/Dockerfile
+    image: mrzodeczko/security-platform-user-service:2026-06-29-28
     restart: on-failure:5
     expose:
       - "8083"
@@ -122,12 +123,13 @@ services:
   # AUTH SERVICE
   # --------------------------------------------------------------------------------------------------------------------
   auth-service:
-    build:
-      context: .
-      dockerfile: services/auth-service/Dockerfile
+    image: mrzodeczko/security-platform-auth-service:2026-06-29-28
+    #    build:
+#      context: .
+#      dockerfile: services/auth-service/Dockerfile
     restart: on-failure:5
-    ports:
-      - "8084:8084"
+    expose:
+      - "8084"
     depends_on:
       user-service:
         condition: service_healthy
@@ -165,9 +167,10 @@ services:
   # API GATEWAY SERVICE
   # --------------------------------------------------------------------------------------------------------------------
   api-gateway-service:
-    build:
-      context: .
-      dockerfile: services/api-gateway-service/Dockerfile
+#    build:
+#      context: .
+#      dockerfile: services/api-gateway-service/Dockerfile
+    image: mrzodeczko/security-platform-api-gateway-service:2026-06-29-28
     restart: on-failure:5
     ports:
       - "${API_GATEWAY_SERVICE_PORT:-8085}:8085"

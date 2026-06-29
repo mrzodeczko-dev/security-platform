@@ -27,7 +27,7 @@ jobs:
           echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
           TAG_DATE=$(date -u +%Y-%m-%d)
-          TAG="${TAG_DATE}-${{ github.event.workflow_run.run_number }}"
+          TAG="${TAG_DATE}-v${{ github.event.workflow_run.run_number }}"
           NAMESPACE="mrzodeczko"
           SERVICES="security-platform-user-service security-platform-auth-service security-platform-api-gateway-service"
 
