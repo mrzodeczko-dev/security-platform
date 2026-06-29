@@ -23,5 +23,5 @@ Thumbs.db
 # Logs
 *.log
 
-# Helm secrets
-helm
+# Helm secrets (real values live in secrets.yaml, passed via -f)
+helm/**/secrets.yaml
