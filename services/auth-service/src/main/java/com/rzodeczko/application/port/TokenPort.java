@@ -6,6 +6,6 @@ import com.rzodeczko.domain.model.TokenInfo;
 import java.util.UUID;
 
 public interface TokenPort {
-    TokenPairDto generate(UUID userId, String username, String role);
+    TokenPairDto generate(UUID userId, String username, String role, String familyId);
     TokenInfo parse(String token);
 }

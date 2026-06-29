@@ -32,15 +32,17 @@ class JwtTokenAdapterTest {
 
     private final JwtTokenAdapter adapter = buildAdapter(SECRET, 900_000L, 604_800_000L);
     private UUID userId;
+    private String familyId;
 
     @BeforeEach
     void setUp() {
         userId = UUID.randomUUID();
+        familyId = UUID.randomUUID().toString();
     }
 
     @Test
     void generate_producesNonBlankDistinctTokens() {
-        var pair = adapter.generate(userId, "john", "USER");
+        var pair = adapter.generate(userId, "john", "USER", familyId);
 
         assertThat(pair.accessToken()).isNotBlank();
         assertThat(pair.refreshToken()).isNotBlank();
@@ -49,7 +51,7 @@ class JwtTokenAdapterTest {
 
     @Test
     void parseAccessToken_returnsCorrectClaims() {
-        var pair = adapter.generate(userId, "john", "USER");
+        var pair = adapter.generate(userId, "john", "USER", familyId);
 
         var info = adapter.parse(pair.accessToken());
 
@@ -57,11 +59,12 @@ class JwtTokenAdapterTest {
         assertThat(info.username()).isEqualTo("john");
         assertThat(info.role()).isEqualTo("USER");
         assertThat(info.type()).isEqualTo(TokenType.ACCESS);
+        assertThat(info.familyId()).isNull();
     }
 
     @Test
-    void parseRefreshToken_returnsRefreshTypeWithJti() {
-        var pair = adapter.generate(userId, "john", "USER");
+    void parseRefreshToken_returnsRefreshTypeWithJtiAndFamilyId() {
+        var pair = adapter.generate(userId, "john", "USER", familyId);
 
         var info = adapter.parse(pair.refreshToken());
 
@@ -69,11 +72,12 @@ class JwtTokenAdapterTest {
         assertThat(info.userId()).isEqualTo(userId);
         assertThat(info.username()).isEqualTo("john");
         assertThat(info.jti()).isNotBlank();
+        assertThat(info.familyId()).isEqualTo(familyId);
     }
 
     @Test
     void parseAccessToken_hasJti() {
-        var pair = adapter.generate(userId, "john", "USER");
+        var pair = adapter.generate(userId, "john", "USER", familyId);
 
         var info = adapter.parse(pair.accessToken());
 
@@ -82,8 +86,8 @@ class JwtTokenAdapterTest {
 
     @Test
     void generate_producesUniqueJtiPerToken() {
-        var pair1 = adapter.generate(userId, "john", "USER");
-        var pair2 = adapter.generate(userId, "john", "USER");
+        var pair1 = adapter.generate(userId, "john", "USER", familyId);
+        var pair2 = adapter.generate(userId, "john", "USER", UUID.randomUUID().toString());
 
         var accessJti1 = adapter.parse(pair1.accessToken()).jti();
         var accessJti2 = adapter.parse(pair2.accessToken()).jti();
@@ -96,6 +100,18 @@ class JwtTokenAdapterTest {
     }
 
     @Test
+    void refreshTokensInSameFamily_shareFamilyId() {
+        var pair1 = adapter.generate(userId, "john", "USER", familyId);
+        var pair2 = adapter.generate(userId, "john", "USER", familyId);
+
+        var info1 = adapter.parse(pair1.refreshToken());
+        var info2 = adapter.parse(pair2.refreshToken());
+
+        assertThat(info1.familyId()).isEqualTo(info2.familyId()).isEqualTo(familyId);
+        assertThat(info1.jti()).isNotEqualTo(info2.jti());
+    }
+
+    @Test
     void parse_garbageString_throwsInvalidTokenException() {
         assertThatThrownBy(() -> adapter.parse("not.a.valid.jwt"))
                 .isInstanceOf(InvalidTokenException.class);
@@ -104,7 +120,7 @@ class JwtTokenAdapterTest {
     @Test
     void parse_wrongSignature_throwsInvalidTokenException() {
         var otherAdapter = buildAdapter(OTHER_SECRET, 900_000L, 604_800_000L);
-        var pairSignedByOther = otherAdapter.generate(userId, "john", "USER");
+        var pairSignedByOther = otherAdapter.generate(userId, "john", "USER", familyId);
 
         assertThatThrownBy(() -> adapter.parse(pairSignedByOther.accessToken()))
                 .isInstanceOf(InvalidTokenException.class);
@@ -113,7 +129,7 @@ class JwtTokenAdapterTest {
     @Test
     void parse_expiredToken_throwsInvalidTokenException() {
         var expiredAdapter = buildAdapter(SECRET, -1L, -1L);
-        var pair = expiredAdapter.generate(userId, "john", "USER");
+        var pair = expiredAdapter.generate(userId, "john", "USER", familyId);
 
         assertThatThrownBy(() -> adapter.parse(pair.accessToken()))
                 .isInstanceOf(InvalidTokenException.class);

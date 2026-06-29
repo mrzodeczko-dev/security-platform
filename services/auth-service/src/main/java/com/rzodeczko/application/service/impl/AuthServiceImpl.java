@@ -55,13 +55,15 @@ public class AuthServiceImpl implements AuthService {
             return LoginResultDto.mfaRequired(mfaId, command.username());
         }
 
+        var familyId = UUID.randomUUID().toString();
         var tokens = tokenPort.generate(
                 credentials.userId(),
                 credentials.username(),
-                credentials.role()
+                credentials.role(),
+                familyId
         );
 
-        storeRefreshToken(tokens.refreshToken(), credentials.userId());
+        storeRefreshToken(tokens.refreshToken(), credentials.userId(), familyId);
 
         return LoginResultDto.withTokens(tokens);
     }
@@ -84,13 +86,15 @@ public class AuthServiceImpl implements AuthService {
 
         mfaCachePort.deleteMfaSession(command.mfaId());
 
+        var familyId = UUID.randomUUID().toString();
         var tokens = tokenPort.generate(
                 mfaData.userId(),
                 mfaData.username(),
-                mfaData.role()
+                mfaData.role(),
+                familyId
         );
 
-        storeRefreshToken(tokens.refreshToken(), mfaData.userId());
+        storeRefreshToken(tokens.refreshToken(), mfaData.userId(), familyId);
 
         return LoginResultDto.withTokens(tokens);
     }
@@ -105,21 +109,26 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        // Verify token exists in database (not revoked)
+        // Token reuse detection: if jti not in Redis, the token was already rotated.
+        // An attacker may have stolen and used it — revoke the entire family.
         if (!refreshTokenPort.exists(tokenInfo.jti())) {
+            if (tokenInfo.familyId() != null) {
+                refreshTokenPort.deleteAllByFamilyId(tokenInfo.familyId());
+            }
             throw new RefreshTokenRevokedException();
         }
 
-        // Rotation: revoke old, issue new
+        // Rotation: revoke old, issue new with same familyId
         refreshTokenPort.delete(tokenInfo.jti());
 
         var newTokens = tokenPort.generate(
                 tokenInfo.userId(),
                 tokenInfo.username(),
-                tokenInfo.role()
+                tokenInfo.role(),
+                tokenInfo.familyId()
         );
 
-        storeRefreshToken(newTokens.refreshToken(), tokenInfo.userId());
+        storeRefreshToken(newTokens.refreshToken(), tokenInfo.userId(), tokenInfo.familyId());
 
         return newTokens;
     }
@@ -128,7 +137,9 @@ public class AuthServiceImpl implements AuthService {
     public void logout(LogoutCommand command) {
         try {
             var tokenInfo = tokenPort.parse(command.refreshToken());
-            if (tokenInfo.jti() != null) {
+            if (tokenInfo.familyId() != null) {
+                refreshTokenPort.deleteAllByFamilyId(tokenInfo.familyId());
+            } else if (tokenInfo.jti() != null) {
                 refreshTokenPort.delete(tokenInfo.jti());
             }
         } catch (InvalidTokenException e) {
@@ -136,10 +147,10 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private void storeRefreshToken(String rawToken, UUID userId) {
+    private void storeRefreshToken(String rawToken, UUID userId, String familyId) {
         var info = tokenPort.parse(rawToken);
         if (info.jti() != null) {
-            refreshTokenPort.save(info.jti(), userId);
+            refreshTokenPort.save(info.jti(), userId, familyId);
         }
     }
 }

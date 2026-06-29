@@ -19,7 +19,7 @@ Monorepo for a microservice-based authentication and user management platform, b
 | Service | Port | Description |
 |---------|------|-------------|
 | **API Gateway** | 8085 | JWT validation, RBAC, rate limiting (Bucket4j + Redis), circuit breaker (Resilience4j), request forwarding |
-| **Auth Service** | 8084 | Login, MFA (TOTP), JWT token pair with JTI binding & rotation, server-side revocation via Redis |
+| **Auth Service** | 8084 | Login, MFA (TOTP), JWT token pair with JTI + familyId binding, rotation with reuse detection, server-side revocation via Redis |
 | **User Service** | 8083 | Registration, email activation, password reset (one-time token), MFA setup, role management |
 
 ## Architecture
@@ -61,7 +61,7 @@ graph TB
     Gateway -->|"X-Internal-Secret"| User
 
     Auth -->|"MFA sessions
-Refresh tokens (JTI)"| REDIS
+Refresh tokens (JTI + familyId)"| REDIS
     Gateway -->|"Rate limit buckets"| REDIS
 
     User --> MYSQL

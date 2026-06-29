@@ -43,6 +43,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
     static final UUID USER_ID = UUID.randomUUID();
     static final String INTERNAL_SECRET = "test-internal-secret";
     static final String MFA_SECRET = "JBSWY3DPEHPK3PXP";
+    static final String FAMILY_ID = UUID.randomUUID().toString();
 
 
     @Test
@@ -193,10 +194,9 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
 
     @Test
     void refresh_validCookie_returns201WithNewToken() throws Exception {
-        var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER");
-        // Store the refresh token JTI in Redis (simulates login)
+        var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER", FAMILY_ID);
         var tokenInfo = jwtTokenAdapter.parse(tokens.refreshToken());
-        refreshTokenAdapter.save(tokenInfo.jti(), USER_ID);
+        refreshTokenAdapter.save(tokenInfo.jti(), USER_ID, FAMILY_ID);
 
         var cookie = new MockCookie("refresh-token", tokens.refreshToken());
         cookie.setPath("/auth/refresh");
@@ -211,9 +211,9 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
     }
 
     @Test
-    void refresh_revokedToken_returns401() throws Exception {
-        var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER");
-        // Do NOT store JTI — simulates revoked token
+    void refresh_revokedToken_returns401AndRevokesFamily() throws Exception {
+        var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER", FAMILY_ID);
+        // Do NOT store JTI — simulates revoked token (token reuse scenario)
         var cookie = new MockCookie("refresh-token", tokens.refreshToken());
         cookie.setPath("/auth/refresh");
 
@@ -239,10 +239,11 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
 
 
     @Test
-    void logout_withCookie_returns200AndRevokesToken() throws Exception {
-        var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER");
+    void logout_withCookie_returns200AndRevokesFamily() throws Exception {
+        var familyId = UUID.randomUUID().toString();
+        var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER", familyId);
         var tokenInfo = jwtTokenAdapter.parse(tokens.refreshToken());
-        refreshTokenAdapter.save(tokenInfo.jti(), USER_ID);
+        refreshTokenAdapter.save(tokenInfo.jti(), USER_ID, familyId);
 
         var cookie = new MockCookie("refresh-token", tokens.refreshToken());
         cookie.setPath("/auth/refresh");
