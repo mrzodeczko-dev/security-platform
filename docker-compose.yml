@@ -83,7 +83,7 @@ services:
 #    build:
 #      context: .
 #      dockerfile: services/user-service/Dockerfile
-    image: mrzodeczko/security-platform-user-service:2026-06-29-28
+    image: mrzodeczko/security-platform-user-service:2026-06-29-v31
     restart: on-failure:5
     expose:
       - "8083"
@@ -123,7 +123,7 @@ services:
   # AUTH SERVICE
   # --------------------------------------------------------------------------------------------------------------------
   auth-service:
-    image: mrzodeczko/security-platform-auth-service:2026-06-29-28
+    image: mrzodeczko/security-platform-auth-service:2026-06-29-v31
     #    build:
 #      context: .
 #      dockerfile: services/auth-service/Dockerfile
@@ -170,7 +170,7 @@ services:
 #    build:
 #      context: .
 #      dockerfile: services/api-gateway-service/Dockerfile
-    image: mrzodeczko/security-platform-api-gateway-service:2026-06-29-28
+    image: mrzodeczko/security-platform-api-gateway-service:2026-06-29-v31
     restart: on-failure:5
     ports:
       - "${API_GATEWAY_SERVICE_PORT:-8085}:8085"
