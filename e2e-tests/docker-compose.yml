@@ -58,10 +58,13 @@ services:
       - e2e-net
 
   # ------------------------------------------------
-  # User Service (pre-built image)
+  # User Service
   # ------------------------------------------------
   user-service:
     image: security-platform-user-service
+    build:
+      context: ..
+      dockerfile: services/user-service/Dockerfile
     expose:
       - "8083"
     depends_on:
@@ -87,10 +90,13 @@ services:
       - e2e-net
 
   # ------------------------------------------------
-  # Auth Service (pre-built image)
+  # Auth Service
   # ------------------------------------------------
   auth-service:
     image: security-platform-auth-service
+    build:
+      context: ..
+      dockerfile: services/auth-service/Dockerfile
     expose:
       - "8084"
     depends_on:
@@ -117,10 +123,13 @@ services:
       - e2e-net
 
   # ------------------------------------------------
-  # API Gateway (pre-built image)
+  # API Gateway
   # ------------------------------------------------
   api-gateway-service:
     image: security-platform-api-gateway-service
+    build:
+      context: ..
+      dockerfile: services/api-gateway-service/Dockerfile
     ports:
       - "8085"
     depends_on:
