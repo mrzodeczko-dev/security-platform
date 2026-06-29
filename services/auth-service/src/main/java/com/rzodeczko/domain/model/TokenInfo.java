@@ -7,6 +7,7 @@ public record TokenInfo(
         String username,
         String role,
         TokenType type,
-        String jti
+        String jti,
+        String familyId
 ) {
 }

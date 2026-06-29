@@ -4,14 +4,14 @@
 [![Java](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/)
 [![Redis](https://img.shields.io/badge/Redis-8.2-DC382D.svg?logo=redis&logoColor=white)](https://redis.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![CI](https://github.com/mrzodeczko-dev/security-api-gateway/actions/workflows/ci.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-api-gateway/actions/workflows/ci.yml)
+[![CI](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-api-gateway-service.yml/badge.svg)](https://github.com/mrzodeczko-dev/security-platform/actions/workflows/ci-api-gateway-service.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <a id="overview"></a>
 ## Overview
 [Back to Table of Contents](#toc)
 
-Security API Gateway is a custom-built reverse proxy that sits in front of the microservice ecosystem ([Auth Service](https://github.com/mrzodeczko-dev/security-auth-service), [User Service](https://github.com/mrzodeczko-dev/security-users-service)) and handles JWT authentication, role-based access control, per-client rate limiting, and request forwarding. Built on Hexagonal Architecture with a clean separation between domain, application, and infrastructure layers. The gateway verifies JWT tokens, enriches downstream requests with trusted `X-User-*` headers, strips unsafe response headers, and protects backend services with a distributed Circuit Breaker and Redis-backed rate limiter (Bucket4j).
+Security API Gateway is a custom-built reverse proxy that sits in front of the microservice ecosystem ([Auth Service](../auth-service/), [User Service](../user-service/)) and handles JWT authentication, role-based access control, per-client rate limiting, and request forwarding. Built on Hexagonal Architecture with a clean separation between domain, application, and infrastructure layers. The gateway verifies JWT tokens, enriches downstream requests with trusted `X-User-*` headers, strips unsafe response headers, and protects backend services with a distributed Circuit Breaker and Redis-backed rate limiter (Bucket4j).
 
 <a id="toc"></a>
 ## Table of Contents
@@ -102,6 +102,8 @@ The gateway proxies all requests to downstream services based on path prefix. It
 |--------|------|------|---------|
 | `GET` | `/` | public | Gateway health check |
 | `GET` | `/actuator/health` | public | Spring Actuator health |
+| `GET` | `/actuator/health/liveness` | public | Kubernetes liveness probe |
+| `GET` | `/actuator/health/readiness` | public | Kubernetes readiness probe |
 
 ### Auth Service (`/auth/*` -> Auth Service)
 
@@ -336,7 +338,9 @@ Plain JUnit 5 + Mockito, no Spring context loaded.
 | Class | Key Scenarios |
 |-------|--------------|
 | `GatewayServiceImplTest` | Route resolution, header whitelist filtering, cookie exclusion, X-Request-Id reuse/generation/propagation, X-User-* enrichment for authenticated users, omission for anonymous, hop-by-hop header stripping, query string propagation |
-| `GatewayControllerTest` | GET/POST forwarding, body propagation, empty body for GET, response header propagation, query string forwarding, 404 for unknown route, 502 for downstream unavailable |
+| `GatewayControllerTest` | GET/POST forwarding, body propagation, empty body for GET, response header propagation, query string forwarding, 404 for unknown route, 502 for downstream unavailable, authenticated request extracts userId/username/role from Authentication details |
+| `HealthCheckControllerTest` | health check returns 200 with message |
+| `BeanConfigurationTest` | secretKey valid/too-short, objectMapper, routingTable |
 | `RoutingTableTest` | Prefix-based route matching |
 | `JwtTokenVerificationAdapterTest` | Token verification, claim extraction |
 | `RateLimitFilterTest` | Rate limit enforcement (consume/reject), key resolution (userId vs IP), X-Forwarded-For trust with trusted proxies |
@@ -433,9 +437,7 @@ mvn verify                # unit + integration tests
 │           ├── presentation/controller/ GatewayControllerTest
 │           └── HexagonalArchitectureTest         # ArchUnit boundary enforcement
 ├── .github/workflows/
-│   ├── ci.yml                                   # build + test + JaCoCo + Codecov
-│   └── docker-publish.yaml                      # manual trigger, CI gate, Docker Hub push
-├── docker-compose.yml                           # MySQL + Redis + Auth + Users + Gateway
+│   └── ci-api-gateway-service.yml               # build + test + JaCoCo (monorepo CI)
 ├── Dockerfile                                   # multi-stage build (maven -> jre-alpine, non-root)
 ├── pom.xml
 └── README.md

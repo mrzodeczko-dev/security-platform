@@ -168,7 +168,7 @@ See `.env.example` for all required variables with descriptions.
 ### Start the Service
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 Verify: `curl http://localhost:8083/actuator/health` → `{"status":"UP"}`
@@ -262,7 +262,7 @@ graph LR
     end
 
     subgraph DOMAIN["🏛️ Domain"]
-        UM["User · VerificationCode<br/>Role"]
+        UM["User · VerificationCode<br/>Role · Email · Username"]
         UR["UserRepository<br/>VerificationCodeRepository"]
     end
 
@@ -320,7 +320,7 @@ graph LR
 - **Virtual Threads + container-aware JVM:** `spring.threads.virtual.enabled=true` with `-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC`.
 - **Double Role Validation (Defense in Depth):** `changeUserRole()` first checks the requesting user's role from the database (source of truth), then compares it against the JWT-derived `X-User-Role` header. If they differ, a `RoleMismatchException` (403) signals possible token desynchronization.
 - **One-Time Password Reset Token:** `getPasswordResetPermission()` validates the emailed code, generates a UUID token stored as a `VerificationCode`, and returns it. `resetPassword()` consumes and deletes the token — it cannot be reused.
-- **Domain-Driven Design (DDD):** Rich `User` aggregate with lifecycle methods (`activate()`, `updatePassword()`, `enableMfa()`, `changeRole()`), decoupled from infrastructure via repository ports.
+- **Domain-Driven Design (DDD):** Rich `User` aggregate with lifecycle methods (`activate()`, `updatePassword()`, `enableMfa()`, `changeRole()`) and Value Objects (`Email`, `Username`) that enforce validation at the domain level, decoupled from infrastructure via repository ports.
 
 ---
 
@@ -360,6 +360,8 @@ The project has comprehensive unit and integration tests covering all layers of 
 |-------|-------|
 | `UserTest` | Domain model: `activate()`, `updatePassword()`, `enableMfa()`, `changeRole()` lifecycle, `isAdmin()` |
 | `VerificationCodeTest` | Domain model: `isExpired()` logic |
+| `EmailTest` | Value Object: valid/invalid format validation, blank/null rejection |
+| `UsernameTest` | Value Object: valid length (3-50), alphanumeric validation, blank/null rejection |
 | `UserServiceImplTest` | Application service: registration, activation, password reset (with one-time token), MFA setup, credential verification, role change (with double validation + `RoleMismatchException`) |
 | `TransactionalUserServiceTest` | Transactional decorator delegates to `UserServiceImpl` |
 | `JavaEmailAdapterTest` | Email adapter: sends `SimpleMailMessage` via `JavaMailSender` |
@@ -420,7 +422,8 @@ mvn verify      # full build including integration tests
 │   │   │   │   │                         #   UsernameAlreadyExistsException,
 │   │   │   │   │                         #   VerificationCodeExpiredException,
 │   │   │   │   │                         #   VerificationCodeNotFoundException
-│   │   │   │   ├── model/                # User, VerificationCode, Role
+│   │   │   │   ├── model/                # User, VerificationCode, Role,
+│   │   │   │   │                         #   Email (VO), Username (VO)
 │   │   │   │   └── repository/           # UserRepository, VerificationCodeRepository
 │   │   │   ├── infrastructure/
 │   │   │   │   ├── configuration/        # BeanConfiguration,
@@ -468,7 +471,9 @@ mvn verify      # full build including integration tests
 │           │   └── UserServiceImplTest.java                         # Service unit tests
 │           ├── domain/model/
 │           │   ├── UserTest.java                                    # User domain model tests
-│           │   └── VerificationCodeTest.java                        # VerificationCode tests
+│           │   ├── VerificationCodeTest.java                        # VerificationCode tests
+│           │   ├── EmailTest.java                                   # Email VO tests
+│           │   └── UsernameTest.java                                # Username VO tests
 │           ├── infrastructure/
 │           │   ├── email/
 │           │   │   └── JavaEmailAdapterTest.java                    # Email adapter tests
