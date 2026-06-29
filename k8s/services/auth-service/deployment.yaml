@@ -43,7 +43,7 @@ spec:
       containers:
         - name: auth-service
           image: docker.io/mrzodeczko/security-platform-auth-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8084
