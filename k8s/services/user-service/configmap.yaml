@@ -10,5 +10,5 @@ data:
   SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/users_db?useUnicode=true&useLegacyDatetimeCode=false&serverTimezone=UTC"
   MAIL_HOST: "smtp.gmail.com"
   MAIL_PORT: "587"
-  MAIL_USERNAME: ""
+  MAIL_USERNAME: "firelight.code@gmail.com"
   MFA_ISSUER: "SecurityPlatform"

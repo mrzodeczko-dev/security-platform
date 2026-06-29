@@ -43,7 +43,7 @@ spec:
       containers:
         - name: user-service
           image: docker.io/mrzodeczko/security-platform-user-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8083
