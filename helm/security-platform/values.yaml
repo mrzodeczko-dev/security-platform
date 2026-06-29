@@ -13,7 +13,7 @@ global:
     registry: docker.io
     namespace: mrzodeczko
     tag: "latest"
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   # imagePullSecrets:
   #   - name: dockerhub-credentials
 
@@ -231,18 +231,21 @@ redis:
   #   port: 6379
 
 # ============================================================================
-# Secrets  (override via --set or external secret manager)
+# Secrets
+# DO NOT put real values here — this file is committed to git.
+# Override via:  helm install ... -f secrets.yaml
+# See secrets.example.yaml for the template.
 # ============================================================================
 secrets:
   mysql:
-    rootPassword: "CHANGE_ME"
+    rootPassword: ""
     user: "app_user"
-    password: "CHANGE_ME"
+    password: ""
   redis:
-    password: "CHANGE_ME"
+    password: ""
   jwt:
-    secret: "CHANGE_ME_base64_encoded_512bit_key"
-  internalSecret: "CHANGE_ME"
+    secret: ""
+  internalSecret: ""
   mail:
     password: ""
 
