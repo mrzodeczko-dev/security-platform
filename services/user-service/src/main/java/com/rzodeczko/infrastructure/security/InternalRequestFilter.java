@@ -23,7 +23,9 @@ import java.util.Map;
 public class InternalRequestFilter extends OncePerRequestFilter {
 
     private static final String INTERNAL_SECRET_HEADER = "X-Internal-Secret";
-    private static final String INTERNAL_PATH_PREFIX = "/internal/";
+    // Actuator endpoints are exempt: liveness/readiness probes and Prometheus scraping
+    // cannot present the internal secret.
+    private static final String ACTUATOR_PATH_PREFIX = "/actuator";
 
     private final InternalSecurityProperties internalSecurityProperties;
     private final ObjectMapper objectMapper;
@@ -34,7 +36,8 @@ public class InternalRequestFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        if (!request.getRequestURI().startsWith(INTERNAL_PATH_PREFIX)) {
+        // All other traffic must come from the gateway or a sibling service and carry the secret.
+        if (request.getRequestURI().startsWith(ACTUATOR_PATH_PREFIX)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -48,7 +51,8 @@ public class InternalRequestFilter extends OncePerRequestFilter {
 
         if (!secretValid) {
             log.warn(
-                    "Unauthorized /internal request from IP={}. Missing or invalid X-Internal-Secret header.",
+                    "Unauthorized request to {} from IP={}. Missing or invalid X-Internal-Secret header.",
+                    request.getRequestURI(),
                     request.getRemoteAddr()
             );
             response.setStatus(HttpStatus.FORBIDDEN.value());

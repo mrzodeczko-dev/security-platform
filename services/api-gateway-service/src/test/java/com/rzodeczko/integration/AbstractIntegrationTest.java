@@ -33,6 +33,7 @@ public abstract class AbstractIntegrationTest {
     @DynamicPropertySource
     static void dynamicProperties(DynamicPropertyRegistry registry) {
         registry.add("jwt.secret", () -> JWT_SECRET_BASE64);
+        registry.add("internal.secret", () -> "test-internal-secret");
         registry.add("spring.data.redis.host", redis::getHost);
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
     }

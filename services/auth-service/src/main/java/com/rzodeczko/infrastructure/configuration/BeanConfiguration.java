@@ -8,6 +8,7 @@ import com.rzodeczko.application.port.TokenPort;
 import com.rzodeczko.application.port.UserVerificationPort;
 import com.rzodeczko.application.service.AuthService;
 import com.rzodeczko.application.service.impl.AuthServiceImpl;
+import com.rzodeczko.infrastructure.configuration.properties.InternalSecurityProperties;
 import com.rzodeczko.infrastructure.configuration.properties.JwtProperties;
 import com.rzodeczko.infrastructure.configuration.properties.MfaCacheProperties;
 import com.rzodeczko.infrastructure.configuration.properties.UserServiceProperties;
@@ -30,7 +31,8 @@ import java.util.concurrent.Executors;
 @EnableConfigurationProperties({
         UserServiceProperties.class,
         JwtProperties.class,
-        MfaCacheProperties.class})
+        MfaCacheProperties.class,
+        InternalSecurityProperties.class})
 public class BeanConfiguration {
 
     @Bean

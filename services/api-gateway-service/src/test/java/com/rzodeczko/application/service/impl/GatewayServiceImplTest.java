@@ -37,9 +37,11 @@ class GatewayServiceImplTest {
             new RoutingTable.Route("/users", "http://users:8083")
     ));
 
+    private static final String INTERNAL_SECRET = "test-internal-secret";
+
     @BeforeEach
     void setUp() {
-        gatewayService = new GatewayServiceImpl(forwardingPort, ROUTING_TABLE);
+        gatewayService = new GatewayServiceImpl(forwardingPort, ROUTING_TABLE, INTERNAL_SECRET);
     }
 
     private GatewayResponse stubDownstreamResponse() {
@@ -118,6 +120,44 @@ class GatewayServiceImplTest {
             verify(forwardingPort).forward(any(), captor.capture());
 
             assertThat(captor.getValue().headers()).containsKey("cookie");
+        }
+    }
+
+    @Nested
+    @DisplayName("X-Internal-Secret")
+    class XInternalSecret {
+
+        @Test
+        @DisplayName("adds X-Internal-Secret header to every forwarded request")
+        void addsInternalSecretHeader() {
+            when(forwardingPort.forward(any(), any())).thenReturn(stubDownstreamResponse());
+
+            gatewayService.handle(
+                    new GatewayRequest("/auth/login", "POST", Map.of(), new byte[0], null),
+                    null, null, null);
+
+            var captor = ArgumentCaptor.forClass(GatewayRequest.class);
+            verify(forwardingPort).forward(any(), captor.capture());
+
+            assertThat(captor.getValue().headers().get("X-Internal-Secret"))
+                    .containsExactly(INTERNAL_SECRET);
+        }
+
+        @Test
+        @DisplayName("ignores client-spoofed X-Internal-Secret header")
+        void ignoresSpoofedInternalSecret() {
+            when(forwardingPort.forward(any(), any())).thenReturn(stubDownstreamResponse());
+
+            var headers = Map.of("X-Internal-Secret", List.of("spoofed-value"));
+            gatewayService.handle(
+                    new GatewayRequest("/auth/login", "POST", headers, new byte[0], null),
+                    null, null, null);
+
+            var captor = ArgumentCaptor.forClass(GatewayRequest.class);
+            verify(forwardingPort).forward(any(), captor.capture());
+
+            assertThat(captor.getValue().headers().get("X-Internal-Secret"))
+                    .containsExactly(INTERNAL_SECRET);
         }
     }
 

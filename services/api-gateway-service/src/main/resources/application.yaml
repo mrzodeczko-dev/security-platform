@@ -15,6 +15,9 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
+internal:
+  secret: ${INTERNAL_SECRET}
+
 gateway:
   routes:
     - prefix: /auth

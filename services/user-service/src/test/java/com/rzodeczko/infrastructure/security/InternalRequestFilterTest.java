@@ -36,14 +36,14 @@ class InternalRequestFilterTest {
     }
 
     @Nested
-    @DisplayName("non-internal paths")
-    class NonInternalPaths {
+    @DisplayName("actuator paths")
+    class ActuatorPaths {
 
         @Test
-        @DisplayName("should pass through to filterChain for non-internal path")
-        void shouldPassThroughForNonInternalPath() throws Exception {
+        @DisplayName("should pass through to filterChain for actuator path without secret")
+        void shouldPassThroughForActuatorPath() throws Exception {
             // given
-            var request = new MockHttpServletRequest("GET", "/api/users");
+            var request = new MockHttpServletRequest("GET", "/actuator/health");
             var response = new MockHttpServletResponse();
 
             // when
@@ -51,6 +51,42 @@ class InternalRequestFilterTest {
 
             // then
             verify(filterChain).doFilter(request, response);
+        }
+    }
+
+    @Nested
+    @DisplayName("business paths")
+    class BusinessPaths {
+
+        @Test
+        @DisplayName("should pass through with valid secret")
+        void shouldPassThroughWithValidSecret() throws Exception {
+            // given
+            var request = new MockHttpServletRequest("POST", "/users");
+            request.addHeader("X-Internal-Secret", "my-secret");
+            var response = new MockHttpServletResponse();
+
+            // when
+            filter.doFilterInternal(request, response, filterChain);
+
+            // then
+            verify(filterChain).doFilter(request, response);
+        }
+
+        @Test
+        @DisplayName("should return 403 without secret")
+        void shouldReturn403WithoutSecret() throws Exception {
+            // given
+            var request = new MockHttpServletRequest("POST", "/users");
+            var response = new MockHttpServletResponse();
+            when(objectMapper.writeValueAsString(any())).thenReturn("{\"error\":\"Forbidden\"}");
+
+            // when
+            filter.doFilterInternal(request, response, filterChain);
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(403);
+            verify(filterChain, never()).doFilter(any(), any());
         }
     }
 

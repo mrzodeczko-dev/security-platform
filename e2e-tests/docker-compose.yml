@@ -139,6 +139,7 @@ services:
         condition: service_healthy
     environment:
       JWT_SECRET: Fv8L19xx+3GQzI8ZSy0JmdFROgWJ+TGCOAYsNmvhwrj/xv8EFOv780QgN3Axf9Etc21FRgLysoLhd+kzfbWkeQ==
+      INTERNAL_SECRET: e2e-internal-secret
       AUTH_SERVICE_URL: http://auth-service:8084
       USER_SERVICE_URL: http://user-service:8083
       RATE_LIMIT_ENABLED: true

@@ -50,7 +50,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
     void login_noMfa_returns201WithAccessTokenAndRefreshCookie() throws Exception {
         stubCredentials(false);
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/auth/login").header("X-Internal-Secret", INTERNAL_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"john","password":"Secret123!"}
@@ -66,7 +66,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
     void login_mfaRequired_returns200WithMfaIdAndFlag() throws Exception {
         stubCredentials(true);
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/auth/login").header("X-Internal-Secret", INTERNAL_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"john","password":"Secret123!"}
@@ -79,7 +79,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
 
     @Test
     void login_blankUsername_returns400() throws Exception {
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/auth/login").header("X-Internal-Secret", INTERNAL_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"","password":"Secret123!"}
@@ -90,7 +90,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
 
     @Test
     void login_blankPassword_returns400() throws Exception {
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/auth/login").header("X-Internal-Secret", INTERNAL_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"john","password":""}
@@ -105,7 +105,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
                 .withHeader("X-Internal-Secret", equalTo(INTERNAL_SECRET))
                 .willReturn(aResponse().withStatus(401).withBody("Unauthorized")));
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/auth/login").header("X-Internal-Secret", INTERNAL_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"unknown","password":"wrong"}
@@ -121,7 +121,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
         mfaCacheAdapter.put("john", new MfaData(USER_ID, "john", "USER", MFA_SECRET));
         given(mfaVerificationPort.verify(MFA_SECRET, 482910)).willReturn(true);
 
-        mockMvc.perform(post("/auth/mfa")
+        mockMvc.perform(post("/auth/mfa").header("X-Internal-Secret", INTERNAL_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"mfaId":"%s","code":482910}
@@ -139,7 +139,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
         mfaCacheAdapter.put("john", new MfaData(USER_ID, "john", "USER", MFA_SECRET));
         given(mfaVerificationPort.verify(MFA_SECRET, 111111)).willReturn(false);
 
-        mockMvc.perform(post("/auth/mfa")
+        mockMvc.perform(post("/auth/mfa").header("X-Internal-Secret", INTERNAL_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"mfaId":"%s","code":111111}
@@ -150,7 +150,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
 
     @Test
     void mfa_invalidMfaId_returns401() throws Exception {
-        mockMvc.perform(post("/auth/mfa")
+        mockMvc.perform(post("/auth/mfa").header("X-Internal-Secret", INTERNAL_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"mfaId":"nonexistent-mfa-id","code":123456}
@@ -160,7 +160,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
 
     @Test
     void mfa_codeOutOfRange_returns400() throws Exception {
-        mockMvc.perform(post("/auth/mfa")
+        mockMvc.perform(post("/auth/mfa").header("X-Internal-Secret", INTERNAL_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"mfaId":"some-id","code":99}
@@ -182,7 +182,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
                                 """.formatted(USER_ID, MFA_SECRET))));
         given(mfaVerificationPort.verify(MFA_SECRET, 482910)).willReturn(true);
 
-        mockMvc.perform(post("/auth/mfa")
+        mockMvc.perform(post("/auth/mfa").header("X-Internal-Secret", INTERNAL_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"mfaId":"%s","code":482910}
@@ -201,7 +201,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
         var cookie = new MockCookie("refresh-token", tokens.refreshToken());
         cookie.setPath("/auth/refresh");
 
-        mockMvc.perform(post("/auth/refresh").cookie(cookie))
+        mockMvc.perform(post("/auth/refresh").header("X-Internal-Secret", INTERNAL_SECRET).cookie(cookie))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
                 .andExpect(cookie().exists("refresh-token"));
@@ -217,13 +217,13 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
         var cookie = new MockCookie("refresh-token", tokens.refreshToken());
         cookie.setPath("/auth/refresh");
 
-        mockMvc.perform(post("/auth/refresh").cookie(cookie))
+        mockMvc.perform(post("/auth/refresh").header("X-Internal-Secret", INTERNAL_SECRET).cookie(cookie))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void refresh_noCookie_returns400() throws Exception {
-        mockMvc.perform(post("/auth/refresh"))
+        mockMvc.perform(post("/auth/refresh").header("X-Internal-Secret", INTERNAL_SECRET))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").isNotEmpty());
     }
@@ -233,7 +233,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
         var cookie = new MockCookie("refresh-token", "not-a-jwt");
         cookie.setPath("/auth/refresh");
 
-        mockMvc.perform(post("/auth/refresh").cookie(cookie))
+        mockMvc.perform(post("/auth/refresh").header("X-Internal-Secret", INTERNAL_SECRET).cookie(cookie))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -252,7 +252,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
         var cookie = new MockCookie("refresh-token", tokens.refreshToken());
         cookie.setPath("/auth/refresh");
 
-        mockMvc.perform(post("/auth/logout").cookie(cookie))
+        mockMvc.perform(post("/auth/logout").header("X-Internal-Secret", INTERNAL_SECRET).cookie(cookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value("Logged out successfully"))
                 .andExpect(cookie().maxAge("refresh-token", 0));
@@ -275,7 +275,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
         var cookie = new MockCookie("refresh-token", tokens.refreshToken());
         cookie.setPath("/auth/refresh");
 
-        mockMvc.perform(post("/auth/logout?revokeAll=true").cookie(cookie))
+        mockMvc.perform(post("/auth/logout?revokeAll=true").header("X-Internal-Secret", INTERNAL_SECRET).cookie(cookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value("Logged out successfully"))
                 .andExpect(cookie().maxAge("refresh-token", 0));
@@ -287,7 +287,7 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
 
     @Test
     void logout_withoutCookie_returns200() throws Exception {
-        mockMvc.perform(post("/auth/logout"))
+        mockMvc.perform(post("/auth/logout").header("X-Internal-Secret", INTERNAL_SECRET))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value("Logged out successfully"))
                 .andExpect(cookie().maxAge("refresh-token", 0));

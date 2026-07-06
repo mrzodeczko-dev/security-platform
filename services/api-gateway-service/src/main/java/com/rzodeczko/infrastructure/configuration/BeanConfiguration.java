@@ -5,6 +5,7 @@ import com.rzodeczko.application.port.out.ForwardingPort;
 import com.rzodeczko.application.service.impl.GatewayServiceImpl;
 import com.rzodeczko.domain.model.RoutingTable;
 import com.rzodeczko.infrastructure.configuration.properties.GatewayProperties;
+import com.rzodeczko.infrastructure.configuration.properties.InternalSecurityProperties;
 import com.rzodeczko.infrastructure.configuration.properties.JwtProperties;
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
@@ -32,7 +33,7 @@ import java.util.Base64;
 import java.util.concurrent.Executors;
 
 @Configuration
-@EnableConfigurationProperties({JwtProperties.class, GatewayProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, GatewayProperties.class, InternalSecurityProperties.class})
 public class BeanConfiguration {
     private static final int HS512_MIN_KEY_LENGTH = 64;
 
@@ -77,9 +78,13 @@ public class BeanConfiguration {
     @Bean
     public GatewayPort gatewayService(
             ForwardingPort forwardingPort,
-            RoutingTable routingTable
+            RoutingTable routingTable,
+            InternalSecurityProperties internalSecurityProperties
     ) {
-        return new GatewayServiceImpl(forwardingPort, routingTable);
+        if (internalSecurityProperties.secret() == null || internalSecurityProperties.secret().isBlank()) {
+            throw new IllegalStateException("internal.secret (INTERNAL_SECRET env) must be configured");
+        }
+        return new GatewayServiceImpl(forwardingPort, routingTable, internalSecurityProperties.secret());
     }
 
     @Bean

@@ -26,10 +26,12 @@ public class GatewayServiceImpl implements GatewayPort {
 
     private final ForwardingPort forwardingPort;
     private final RoutingTable routingTable;
+    private final String internalSecret;
 
-    public GatewayServiceImpl(ForwardingPort forwardingPort, RoutingTable routingTable) {
+    public GatewayServiceImpl(ForwardingPort forwardingPort, RoutingTable routingTable, String internalSecret) {
         this.forwardingPort = forwardingPort;
         this.routingTable = routingTable;
+        this.internalSecret = internalSecret;
     }
 
     /**
@@ -64,6 +66,9 @@ public class GatewayServiceImpl implements GatewayPort {
                 .flatMap(values -> values.stream().findFirst())
                 .orElse(UUID.randomUUID().toString());
         forwardedHeaders.put("X-Request-Id", List.of(requestId));
+
+        // Authenticate the gateway to downstream services; they reject requests without this header
+        forwardedHeaders.put("X-Internal-Secret", List.of(internalSecret));
 
         // Add trusted X-User-* headers validated by the gateway (absent for public paths)
         if (userId != null) {

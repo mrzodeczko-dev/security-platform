@@ -183,6 +183,7 @@ services:
         condition: service_healthy
     environment:
       JWT_SECRET: ${API_GATEWAY_JWT_SECRET}
+      INTERNAL_SECRET: ${API_GATEWAY_INTERNAL_SECRET}
       AUTH_SERVICE_URL: ${API_GATEWAY_AUTH_SERVICE_URL:-http://auth-service:8084}
       USER_SERVICE_URL: ${API_GATEWAY_USER_SERVICE_URL:-http://user-service:8083}
       RATE_LIMIT_ENABLED: ${API_GATEWAY_RATE_LIMIT_ENABLED:-true}

@@ -1,6 +1,9 @@
 server:
   port: 0
 
+internal:
+  secret: test-internal-secret
+
 spring:
   application:
     name: auth-service-test

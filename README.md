@@ -67,7 +67,7 @@ verification"| User
     style MYSQL fill:#ffebee,stroke:#c62828,color:#000
 ```
 
-The gateway is the only publicly exposed service. Auth and User services communicate via internal network with `X-Internal-Secret` header validation.
+The gateway is the only publicly exposed service. All internal traffic — gateway → Auth/User and Auth → User — must carry a valid `X-Internal-Secret` header; both services reject any request without it (except `/actuator` probes).
 
 ## Quick Start (Docker Compose)
 
