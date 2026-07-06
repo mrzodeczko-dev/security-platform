@@ -1,6 +1,6 @@
 # 👤 User Service - Hexagonal User Management Platform
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.6-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -331,7 +331,7 @@ graph LR
 | Layer | Technology |
 |-------|------------|
 | Language | Java 25 (virtual threads via Project Loom) |
-| Framework | Spring Boot 4.0.6 |
+| Framework | Spring Boot 4.1.0 |
 | Web | Spring WebMVC, Spring Validation |
 | Persistence | Spring Data JPA, HikariCP (max-pool 20) |
 | Database | MySQL |

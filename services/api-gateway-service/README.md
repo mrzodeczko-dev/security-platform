@@ -1,6 +1,6 @@
 # Security API Gateway
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.6-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/)
 [![Redis](https://img.shields.io/badge/Redis-8.2-DC382D.svg?logo=redis&logoColor=white)](https://redis.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
@@ -310,7 +310,7 @@ graph LR
 | Layer | Technology |
 |-------|------------|
 | Language | Java 25 (virtual threads via Project Loom) |
-| Framework | Spring Boot 4.0.6 |
+| Framework | Spring Boot 4.1.0 |
 | Web | Spring WebMVC |
 | Security | Spring Security (stateless JWT, CORS, role-based access) |
 | Token verification | jjwt 0.12.5 (HMAC-SHA512) |
