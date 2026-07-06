@@ -71,7 +71,12 @@ public final class ApiClient {
     }
 
     public Response logout() {
-        var response = given().when().post("/auth/logout");
+        return logout(false);
+    }
+
+    public Response logout(boolean revokeAll) {
+        var url = revokeAll ? "/auth/logout?revokeAll=true" : "/auth/logout";
+        var response = given().when().post(url);
         if (response.statusCode() == 200) {
             accessToken = null;
             refreshTokenCookie = null;

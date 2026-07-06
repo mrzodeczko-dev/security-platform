@@ -112,7 +112,7 @@ The gateway proxies all requests to downstream services based on path prefix. It
 | `POST` | `/auth/login` | public | Authenticate user |
 | `POST` | `/auth/refresh` | public | Refresh access token |
 | `POST` | `/auth/mfa` | public | MFA verification |
-| `POST` | `/auth/logout` | public | Logout (invalidate refresh token) |
+| `POST` | `/auth/logout` | public | Logout current session (`?revokeAll=true` to revoke all sessions) |
 
 ### User Service (`/users/*` -> User Service)
 

@@ -110,7 +110,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // Token reuse detection: if jti not in Redis, the token was already rotated.
-        // An attacker may have stolen and used it — revoke the entire family.
+        // An attacker may have stolen and used it - revoke the entire family.
         if (!refreshTokenPort.exists(tokenInfo.jti())) {
             if (tokenInfo.familyId() != null) {
                 refreshTokenPort.deleteAllByFamilyId(tokenInfo.familyId());
@@ -137,13 +137,16 @@ public class AuthServiceImpl implements AuthService {
     public void logout(LogoutCommand command) {
         try {
             var tokenInfo = tokenPort.parse(command.refreshToken());
-            if (tokenInfo.familyId() != null) {
+
+            if (command.revokeAll() && tokenInfo.familyId() != null) {
+                // Explicit "logout from all devices" - revoke the entire token family
                 refreshTokenPort.deleteAllByFamilyId(tokenInfo.familyId());
             } else if (tokenInfo.jti() != null) {
+                // Default single-session logout - revoke only this refresh token
                 refreshTokenPort.delete(tokenInfo.jti());
             }
         } catch (InvalidTokenException e) {
-            // Token already expired or invalid — nothing to revoke
+            // Token already expired or invalid - nothing to revoke
         }
     }
 

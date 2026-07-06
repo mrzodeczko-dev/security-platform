@@ -77,6 +77,18 @@
           "auth-controller"
         ],
         "operationId": "logout",
+        "parameters": [
+          {
+            "name": "revokeAll",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "If true, revoke all sessions (entire token family). Default: revoke current session only."
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",

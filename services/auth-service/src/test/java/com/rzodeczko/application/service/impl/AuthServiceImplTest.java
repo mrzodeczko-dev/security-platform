@@ -236,13 +236,34 @@ class AuthServiceImplTest {
     // ==========================================
 
     @Test
-    void logout_validTokenWithFamilyId_deletesEntireFamily() {
+    void logout_default_deletesSingleTokenOnly() {
         var tokenInfo = new TokenInfo(userId, "john", "USER", TokenType.REFRESH, JTI, FAMILY_ID);
         given(tokenPort.parse("refresh-jwt")).willReturn(tokenInfo);
 
         authService.logout(new LogoutCommand("refresh-jwt"));
 
+        then(refreshTokenPort).should().delete(JTI);
+        then(refreshTokenPort).shouldHaveNoMoreInteractions();
+    }
+
+    @Test
+    void logout_revokeAll_deletesEntireFamily() {
+        var tokenInfo = new TokenInfo(userId, "john", "USER", TokenType.REFRESH, JTI, FAMILY_ID);
+        given(tokenPort.parse("refresh-jwt")).willReturn(tokenInfo);
+
+        authService.logout(new LogoutCommand("refresh-jwt", true));
+
         then(refreshTokenPort).should().deleteAllByFamilyId(FAMILY_ID);
+    }
+
+    @Test
+    void logout_revokeAll_withoutFamilyId_fallsBackToSingleTokenDeletion() {
+        var tokenInfo = new TokenInfo(userId, "john", "USER", TokenType.REFRESH, JTI, null);
+        given(tokenPort.parse("refresh-jwt")).willReturn(tokenInfo);
+
+        authService.logout(new LogoutCommand("refresh-jwt", true));
+
+        then(refreshTokenPort).should().delete(JTI);
     }
 
     @Test

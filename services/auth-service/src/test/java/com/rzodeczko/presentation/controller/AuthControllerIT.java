@@ -239,11 +239,15 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
 
 
     @Test
-    void logout_withCookie_returns200AndRevokesFamily() throws Exception {
+    void logout_default_revokesSingleTokenOnly() throws Exception {
         var familyId = UUID.randomUUID().toString();
         var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER", familyId);
         var tokenInfo = jwtTokenAdapter.parse(tokens.refreshToken());
         refreshTokenAdapter.save(tokenInfo.jti(), USER_ID, familyId);
+
+        // Store a second token in the same family to verify it survives default logout
+        var secondJti = "second-jti-" + UUID.randomUUID();
+        refreshTokenAdapter.save(secondJti, USER_ID, familyId);
 
         var cookie = new MockCookie("refresh-token", tokens.refreshToken());
         cookie.setPath("/auth/refresh");
@@ -253,8 +257,32 @@ class AuthControllerIT extends AbstractWireMockIntegrationTest {
                 .andExpect(jsonPath("$.data").value("Logged out successfully"))
                 .andExpect(cookie().maxAge("refresh-token", 0));
 
-        // Token should be revoked in Redis
+        // Only the submitted token should be revoked; sibling token in the same family survives
         assertThat(refreshTokenAdapter.exists(tokenInfo.jti())).isFalse();
+        assertThat(refreshTokenAdapter.exists(secondJti)).isTrue();
+    }
+
+    @Test
+    void logout_revokeAll_revokesEntireFamily() throws Exception {
+        var familyId = UUID.randomUUID().toString();
+        var tokens = jwtTokenAdapter.generate(USER_ID, "john", "USER", familyId);
+        var tokenInfo = jwtTokenAdapter.parse(tokens.refreshToken());
+        refreshTokenAdapter.save(tokenInfo.jti(), USER_ID, familyId);
+
+        var secondJti = "second-jti-" + UUID.randomUUID();
+        refreshTokenAdapter.save(secondJti, USER_ID, familyId);
+
+        var cookie = new MockCookie("refresh-token", tokens.refreshToken());
+        cookie.setPath("/auth/refresh");
+
+        mockMvc.perform(post("/auth/logout?revokeAll=true").cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value("Logged out successfully"))
+                .andExpect(cookie().maxAge("refresh-token", 0));
+
+        // Both tokens in the family should be revoked
+        assertThat(refreshTokenAdapter.exists(tokenInfo.jti())).isFalse();
+        assertThat(refreshTokenAdapter.exists(secondJti)).isFalse();
     }
 
     @Test
