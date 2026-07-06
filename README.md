@@ -59,12 +59,12 @@ Refresh tokens (JTI + familyId)"| REDIS
     Auth -->|"Credential
 verification"| User
 
-    style Client fill:#e1f5fe
-    style Gateway fill:#fff3e0
-    style Auth fill:#f3e5f5
-    style User fill:#e8f5e9
-    style REDIS fill:#ffebee
-    style MYSQL fill:#ffebee
+    style Client fill:#e1f5fe,stroke:#0277bd,color:#000
+    style Gateway fill:#fff3e0,stroke:#ef6c00,color:#000
+    style Auth fill:#f3e5f5,stroke:#7b1fa2,color:#000
+    style User fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style REDIS fill:#ffebee,stroke:#c62828,color:#000
+    style MYSQL fill:#ffebee,stroke:#c62828,color:#000
 ```
 
 The gateway is the only publicly exposed service. Auth and User services communicate via internal network with `X-Internal-Secret` header validation.
