@@ -213,5 +213,5 @@ Docker Hub images: `mrzodeczko/security-platform-user-service`, `mrzodeczko/secu
 
 ## Contact
 
-Designed and implemented by **Michal Rzodeczko**.
+Designed and implemented by **Michał Rzodeczko**.
 GitHub: [mrzodeczko-dev](https://github.com/mrzodeczko-dev)
